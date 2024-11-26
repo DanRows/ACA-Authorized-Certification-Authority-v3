@@ -1,10 +1,6 @@
 # config/secrets_manager.py
 
 import os
-from dotenv import load_dotenv
-
-# Cargar variables desde el archivo .env
-load_dotenv()
 
 class SecretsManager:
     """
