@@ -1,0 +1,1 @@
+class DashboardWidgets: pass 
