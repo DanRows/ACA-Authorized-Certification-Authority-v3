@@ -1,56 +1,62 @@
-import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List
-import plotly.graph_objects as go
-import plotly.express as px
 
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
+
+from components.auth import Auth
+from components.certificados import Certificados
+from components.chat import Chat
+from components.metrics_dashboard import MetricsDashboard
+from components.notifications import Notifications
+from components.report_generator import ReportGenerator
+from components.sidebar import Sidebar
+from components.solicitudes import Solicitudes
 from config.configuration import Configuration
 from services.factory import ServiceFactory
-from components.certificados import Certificados
-from components.solicitudes import Solicitudes
-from components.auth import Auth
-from components.chat import Chat
-from components.notifications import Notifications
-from components.metrics_dashboard import MetricsDashboard
-from components.sidebar import Sidebar
-from components.report_generator import ReportGenerator
-from utils.helpers import validate_input, get_database_connection
-from utils.logger import Logger
+from services.metrics_service import MetricsService
 from utils.cache import cached
+from utils.helpers import get_database_connection, validate_input
+from utils.logger import Logger
+
 
 class ACMADashboard:
     def __init__(self):
+        self.metrics_service = MetricsService()
+        self.metrics_dashboard = MetricsDashboard()
         self.config = Configuration()
         self.auth = Auth()
         self.certificados = Certificados()
         self.solicitudes = Solicitudes()
         self.chat = Chat()
         self.notifications = Notifications()
-        self.metrics = MetricsDashboard()
         self.report_generator = ReportGenerator()
         self.sidebar = Sidebar()
         self.setup_session_state()
-        
-    def setup_session_state(self):
-        """Inicializa el estado de la sesión con valores predeterminados"""
-        if 'authenticated' not in st.session_state:
-            st.session_state.authenticated = False
-        if 'current_provider' not in st.session_state:
-            st.session_state.current_provider = self.config.get_setting("default_provider")
-        if 'current_page' not in st.session_state:
-            st.session_state.current_page = "home"
-            
-    @cached(expire_in=300)  # Cache por 5 minutos
-    def render_metrics_dashboard(self):
-        """Renderiza el panel de métricas con caché"""
-        self.metrics.render()
-            
-    def render_content(self):
+
+    def setup_session_state(self) -> None:
+        default_states = {
+            'authenticated': False,
+            'current_provider': self.config.get_setting("default_provider"),
+            'current_page': "home",
+            'metrics_period': 30,
+            'date_range': (datetime.now() - timedelta(days=30), datetime.now())
+        }
+
+        for key, value in default_states.items():
+            if key not in st.session_state:
+                st.session_state[key] = value
+
+    def render_metrics_dashboard(self) -> None:
+        self.metrics_dashboard.render()
+
+    def render_content(self) -> None:
         """Renderiza el contenido principal según la página actual"""
         if not st.session_state.authenticated:
             st.warning("Por favor inicia sesión para acceder al dashboard")
             return
-            
+
         pages = {
             "home": self.render_home,
             "certificates": self.render_certificate_section,
@@ -59,17 +65,17 @@ class ACMADashboard:
             "metrics": self.render_metrics_dashboard,
             "reports": self.report_generator.render
         }
-        
+
         current_page = st.session_state.current_page
         if current_page in pages:
             pages[current_page]()
         else:
             st.error("Página no encontrada")
-    
-    def render_home(self):
+
+    def render_home(self) -> None:
         """Renderiza la página de inicio"""
         st.title("ACMA Dashboard - Panel Principal")
-        
+
         # Métricas principales
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -81,20 +87,20 @@ class ACMADashboard:
         with col3:
             success_rate = self._calculate_success_rate()
             st.metric("Tasa de Éxito", f"{success_rate}%")
-            
+
         # Gráficos y estadísticas
         self._render_statistics()
-    
-    def _render_statistics(self):
+
+    def _render_statistics(self) -> None:
         """Renderiza gráficos y estadísticas"""
         col1, col2 = st.columns(2)
-        
+
         with col1:
             self._render_requests_timeline()
         with col2:
             self._render_provider_distribution()
-    
-    def _render_requests_timeline(self):
+
+    def _render_requests_timeline(self) -> None:
         """Renderiza la línea de tiempo de solicitudes"""
         st.subheader("Actividad Reciente")
         requests = self.solicitudes.get_requests()
@@ -105,15 +111,15 @@ class ACMADashboard:
             st.plotly_chart(fig)
         else:
             st.info("No hay solicitudes registradas")
-    
-    def _render_provider_distribution(self):
+
+    def _render_provider_distribution(self) -> None:
         """Renderiza la distribución de uso por proveedor"""
         st.subheader("Distribución por Proveedor")
         providers = ServiceFactory.get_available_providers()
         values = [1] * len(providers)  # Simulado
         fig = px.pie(values=values, names=providers)
         st.plotly_chart(fig)
-    
+
     def _calculate_success_rate(self) -> float:
         """Calcula la tasa de éxito de las solicitudes"""
         requests = self.solicitudes.get_requests()
@@ -121,6 +127,16 @@ class ACMADashboard:
             return 100.0
         completed = len([r for r in requests if r['status'] == 'completed'])
         return round((completed / len(requests)) * 100, 2)
+
+    def render_certificate_section(self) -> None:
+        st.title("Certificados")
+        # Implementar lógica de certificados aquí
+        st.info("Sección en desarrollo")
+
+    def render_requests_section(self) -> None:
+        st.title("Solicitudes")
+        # Implementar lógica de solicitudes aquí
+        st.info("Sección en desarrollo")
 
 def main():
     """Función principal de la aplicación"""
@@ -130,16 +146,16 @@ def main():
         layout="wide",
         initial_sidebar_state="expanded"
     )
-    
+
     try:
         dashboard = ACMADashboard()
         dashboard.sidebar.render()
         dashboard.render_content()
-        
+
     except Exception as e:
         Logger.error(f"Error crítico en la aplicación: {str(e)}")
         st.error("""
-        Ha ocurrido un error inesperado. 
+        Ha ocurrido un error inesperado.
         Por favor, intente:
         1. Recargar la página
         2. Limpiar la caché del navegador

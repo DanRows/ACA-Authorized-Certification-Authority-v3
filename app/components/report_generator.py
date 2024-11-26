@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 import pandas as pd
 import plotly.express as px
+import io
 
 from utils.logger import Logger
 from utils.cache import cached
@@ -17,7 +18,7 @@ class ReportGenerator:
         self.certificados = Certificados()
         self._initialize_state()
     
-    def _initialize_state(self):
+    def _initialize_state(self) -> None:
         """Inicializa el estado del generador de reportes"""
         if 'report_data' not in st.session_state:
             st.session_state.report_data = None
@@ -34,7 +35,7 @@ class ReportGenerator:
         else:
             return self._get_ai_performance_data(date_range)
     
-    def render(self):
+    def render(self) -> None:
         """Renderiza la interfaz del generador de reportes"""
         try:
             st.header("Generador de Reportes")
@@ -89,7 +90,7 @@ class ReportGenerator:
         # Visualizaciones
         self._render_report_visualizations()
     
-    def _render_report_visualizations(self):
+    def _render_report_visualizations(self) -> None:
         """Renderiza visualizaciones del reporte"""
         if st.session_state.last_report_type == "Solicitudes":
             fig = px.pie(
@@ -108,7 +109,7 @@ class ReportGenerator:
             )
             st.plotly_chart(fig)
     
-    def _render_download_options(self):
+    def _render_download_options(self) -> None:
         """Renderiza opciones de descarga"""
         col1, col2 = st.columns(2)
         
@@ -118,7 +119,7 @@ class ReportGenerator:
         with col2:
             self._download_excel()
     
-    def _generate_report(self, report_type: str, date_range: tuple):
+    def _generate_report(self, report_type: str, date_range: tuple) -> None:
         """Genera el reporte seleccionado"""
         try:
             st.session_state.report_data = self._get_report_data(
@@ -129,27 +130,28 @@ class ReportGenerator:
             
         except Exception as e:
             Logger.error(f"Error generando reporte: {str(e)}")
-            st.error("Error generando el reporte")
+            st.error("Error al generar el reporte")
     
-    def _download_csv(self):
-        """Opción de descarga CSV"""
+    def _download_csv(self) -> None:
+        """Descarga reporte en formato CSV"""
         if st.session_state.report_data is not None:
             csv = st.session_state.report_data.to_csv(index=False)
             st.download_button(
                 "Descargar CSV",
                 csv,
-                f"reporte_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv"
+                "reporte.csv",
+                "text/csv"
             )
     
-    def _download_excel(self):
-        """Opción de descarga Excel"""
+    def _download_excel(self) -> None:
+        """Descarga reporte en formato Excel"""
         if st.session_state.report_data is not None:
-            buffer = pd.ExcelWriter('report.xlsx', engine='xlsxwriter')
-            st.session_state.report_data.to_excel(buffer, index=False)
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer) as writer:
+                st.session_state.report_data.to_excel(writer, index=False)
             st.download_button(
                 "Descargar Excel",
-                buffer,
-                f"reporte_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                buffer.getvalue(),
+                "reporte.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )

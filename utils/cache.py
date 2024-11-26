@@ -1,72 +1,73 @@
-from functools import wraps
 from datetime import datetime, timedelta
-import json
+from functools import wraps
+from typing import Any, Callable, Dict, List, Optional
+
 import redis
+
 from utils.logger import Logger
 
-class Cache:
+
+class CacheManager:
     def __init__(self):
-        self.redis_client = redis.Redis(
-            host='localhost',
-            port=6379,
-            db=0,
-            decode_responses=True
-        )
-        
-    def set(self, key: str, value: any, expire_in: int = 3600):
-        """
-        Almacena un valor en caché
-        
-        Args:
-            key: Clave para almacenar
-            value: Valor a almacenar
-        """
+        self.redis_client = self._initialize_redis()
+        self.local_cache = {}
+
+    def _initialize_redis(self) -> Optional[redis.Redis]:
         try:
-            serialized = json.dumps(value)
-            self.redis_client.setex(key, expire_in, serialized)
+            return redis.Redis(
+                host='localhost',
+                port=6379,
+                db=0,
+                decode_responses=True,
+                socket_timeout=2
+            )
         except Exception as e:
-            Logger.error(f"Error al almacenar en caché: {e}")
-    
-    def get(self, key: str) -> any:
-        """
-        Recupera un valor de la caché
-        
-        Args:
-            key: Clave a recuperar
-            
-        Returns:
-            El valor almacenado o None si no existe
-        """
-        try:
-            value = self.redis_client.get(key)
-            return json.loads(value) if value else None
-        except Exception as e:
-            Logger.error(f"Error al recuperar de caché: {e}")
+            Logger.warning(f"Redis no disponible: {e}")
             return None
 
-def cached(expire_in=3600):
+    def _get_from_redis(self, key: str) -> Any:
+        if self.redis_client is None:
+            return None
+        try:
+            value = self.redis_client.get(key)
+            return value if value else None
+        except Exception as e:
+            Logger.error(f"Error al obtener de Redis: {e}")
+            return None
+
+    def _get_from_local(self, key: str) -> Any:
+        return self.local_cache.get(key)
+
+    def get(self, key: str) -> Any:
+        redis_value = self._get_from_redis(key)
+        if redis_value is not None:
+            return redis_value
+        return self._get_from_local(key)
+
+
+def cached(ttl: int = 3600) -> Callable:
     """
     Decorador para cachear resultados de funciones
-    
     Args:
-        expire_in: Tiempo de expiración en segundos
+        ttl: Tiempo de vida del caché en segundos
     """
-    def decorator(func):
+    cache: Dict = {}
+
+    def decorator(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(*args, **kwargs):
-            cache = Cache()
-            
-            # Genera clave única para la función y sus argumentos
-            key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
-            
-            # Intenta obtener resultado de caché
-            result = cache.get(key)
-            if result is not None:
-                return result
-            
-            # Si no está en caché, ejecuta la función
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            key = str((func.__name__, args, frozenset(kwargs.items())))
+            now = datetime.now()
+
+            if key in cache:
+                result, timestamp = cache[key]
+                if now - timestamp < timedelta(seconds=ttl):
+                    return result
+
             result = func(*args, **kwargs)
-            cache.set(key, result, expire_in)
+            cache[key] = (result, now)
             return result
+
         return wrapper
-    return decorator 
+
+    return decorator
