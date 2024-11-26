@@ -1,47 +1,59 @@
 import streamlit as st
 from datetime import datetime, timedelta
-from utils.helpers import validate_input
+from typing import Dict, Optional
 from utils.logger import Logger
+from utils.cache import cached
+from config.configuration import Configuration
 
 class Auth:
     def __init__(self):
-        self._initialize_session_state()
+        self.config = Configuration()
+        self._initialize_state()
     
-    def _initialize_session_state(self):
+    def _initialize_state(self):
+        """Inicializa el estado de autenticación"""
         if 'authenticated' not in st.session_state:
             st.session_state.authenticated = False
         if 'user_role' not in st.session_state:
             st.session_state.user_role = None
-            
+        if 'login_attempts' not in st.session_state:
+            st.session_state.login_attempts = 0
+    
     def login_form(self):
-        st.sidebar.header("Iniciar Sesión")
-        
-        with st.sidebar.form("login_form"):
-            credentials = {
-                "username": st.text_input("Usuario"),
-                "password": st.text_input("Contraseña", type="password")
-            }
+        """Renderiza el formulario de inicio de sesión"""
+        try:
+            st.header("Iniciar Sesión")
             
-            submitted = st.form_submit_button("Ingresar")
+            with st.form("login_form"):
+                username = st.text_input("Usuario")
+                password = st.text_input("Contraseña", type="password")
+                submitted = st.form_submit_button("Ingresar")
+                
+                if submitted:
+                    self._handle_login(username, password)
             
-            if submitted:
-                if self._validate_credentials(credentials):
-                    st.session_state.authenticated = True
-                    st.session_state.user_role = self._get_user_role(credentials["username"])
-                    st.experimental_rerun()
-                else:
-                    st.error("Credenciales inválidas")
+            if st.session_state.login_attempts >= 3:
+                st.error("Demasiados intentos fallidos. Espere 5 minutos.")
+                
+        except Exception as e:
+            Logger.error(f"Error en formulario de login: {str(e)}")
+            st.error("Error en el inicio de sesión")
     
     def logout(self):
-        if st.sidebar.button("Cerrar Sesión"):
-            st.session_state.authenticated = False
-            st.session_state.user_role = None
+        """Cierra la sesión del usuario"""
+        if st.button("Cerrar Sesión"):
+            self._clear_session()
             st.experimental_rerun()
     
-    def _validate_credentials(self, credentials):
-        # Aquí iría la validación real contra la base de datos
-        return credentials["username"] == "admin" and credentials["password"] == "admin"
-    
-    def _get_user_role(self, username):
-        # Aquí iría la lógica real para obtener el rol del usuario
-        return "admin" if username == "admin" else "user" 
+    @cached(expire_in=300)
+    def _validate_credentials(self, username: str, password: str) -> Optional[str]:
+        """Valida credenciales con caché"""
+        try:
+            users = self.config.get_setting('users')
+            if username in users and users[username]['password'] == password:
+                return users[username]['role']
+            return None
+            
+        except Exception as e:
+            Logger.error(f"Error validando credenciales: {str(e)}")
+            return None

@@ -1,54 +1,76 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 from utils.logger import Logger
+from utils.cache import cached
 
 class Notifications:
     def __init__(self):
-        self._initialize_session_state()
-        
-    def _initialize_session_state(self):
+        self._initialize_state()
+    
+    def _initialize_state(self):
+        """Inicializa el estado de las notificaciones"""
         if 'notifications' not in st.session_state:
             st.session_state.notifications = []
-            
-    def add_notification(self, message, type="info"):
-        """
-        Agrega una nueva notificación al sistema.
-        """
-        notification = {
-            "message": message,
-            "type": type,
-            "timestamp": datetime.now(),
-            "read": False
-        }
-        st.session_state.notifications.insert(0, notification)
-        
+        if 'last_notification_check' not in st.session_state:
+            st.session_state.last_notification_check = datetime.now()
+    
     def render(self):
-        """
-        Muestra las notificaciones en la interfaz.
-        """
-        with st.sidebar.expander("Notificaciones", expanded=True):
-            unread = len([n for n in st.session_state.notifications if not n["read"]])
+        """Renderiza el panel de notificaciones"""
+        try:
+            st.subheader("Notificaciones")
             
-            if unread > 0:
-                st.markdown(f"**{unread} nuevas notificaciones**")
+            notifications = self._get_notifications()
             
-            for idx, notif in enumerate(st.session_state.notifications[:5]):
-                self._render_notification(idx, notif)
-                
-    def _render_notification(self, idx, notification):
-        with st.container():
-            col1, col2 = st.columns([0.8, 0.2])
+            if not notifications:
+                st.info("No hay notificaciones nuevas")
+                return
             
-            with col1:
-                if notification["type"] == "error":
-                    st.error(notification["message"])
-                elif notification["type"] == "warning":
-                    st.warning(notification["message"])
-                else:
-                    st.info(notification["message"])
+            for notification in notifications:
+                with st.expander(
+                    f"{notification['title']} - {notification['timestamp'].strftime('%H:%M')}",
+                    expanded=not notification['read']
+                ):
+                    st.write(notification['message'])
+                    if not notification['read']:
+                        if st.button("Marcar como leída", key=f"mark_read_{notification['id']}"):
+                            self._mark_as_read(notification['id'])
+            
+        except Exception as e:
+            Logger.error(f"Error en notificaciones: {str(e)}")
+            st.error("Error cargando notificaciones")
+    
+    @cached(expire_in=60)
+    def _get_notifications(self) -> List[Dict]:
+        """Obtiene notificaciones con caché"""
+        return sorted(
+            st.session_state.notifications,
+            key=lambda x: x['timestamp'],
+            reverse=True
+        )
+    
+    def add_notification(self, title: str, message: str):
+        """Agrega una nueva notificación"""
+        try:
+            notification = {
+                'id': len(st.session_state.notifications),
+                'title': title,
+                'message': message,
+                'timestamp': datetime.now(),
+                'read': False
+            }
+            st.session_state.notifications.append(notification)
+            
+        except Exception as e:
+            Logger.error(f"Error agregando notificación: {str(e)}")
+    
+    def _mark_as_read(self, notification_id: int):
+        """Marca una notificación como leída"""
+        try:
+            for notification in st.session_state.notifications:
+                if notification['id'] == notification_id:
+                    notification['read'] = True
+                    break
                     
-            with col2:
-                if not notification["read"]:
-                    if st.button("✓", key=f"notif_{idx}"):
-                        st.session_state.notifications[idx]["read"] = True
-                        st.experimental_rerun() 
+        except Exception as e:
+            Logger.error(f"Error marcando notificación: {str(e)}")
