@@ -1,39 +1,55 @@
-# components/solicitudes.py
+from datetime import datetime
+from typing import Dict, List, Optional
+import uuid
+from utils.helpers import get_database_connection
 
 class Solicitudes:
-    """
-    Handles the management and processing of requests in the ACMA Dashboard.
-    """
-
     def __init__(self):
-        self.requests = []
-
-    def add_request(self, user_data, request_type):
-        """
-        Adds a new request to the system.
-
-        Args:
-            user_data (dict): Information about the user making the request.
-            request_type (str): Type of the request (e.g., "certificate", "query").
+        self.conn = get_database_connection()
+        self._init_db()
         
-        Returns:
-            dict: A confirmation message with the request ID.
-        """
-        request_id = len(self.requests) + 1
-        new_request = {
-            "id": request_id,
-            "user_data": user_data,
-            "type": request_type,
-            "status": "pending",
-        }
-        self.requests.append(new_request)
-        return {"message": "Request added successfully", "request_id": request_id}
-
-    def get_requests(self):
-        """
-        Retrieves all the requests in the system.
-
-        Returns:
-            list: A list of all requests.
-        """
+    def _init_db(self):
+        if not self.conn:
+            self.requests = []
+            return
+            
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS requests (
+                    id UUID PRIMARY KEY,
+                    user_data JSONB,
+                    type VARCHAR(50),
+                    status VARCHAR(20),
+                    created_at TIMESTAMP
+                )
+            """)
+        self.conn.commit()
+        
+    def add_request(self, user_data: Dict, request_type: str) -> Dict:
+        request_id = str(uuid.uuid4())
+        timestamp = datetime.now()
+        
+        if self.conn:
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO requests (id, user_data, type, status, created_at)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (request_id, user_data, request_type, "pending", timestamp))
+            self.conn.commit()
+        else:
+            self.requests.append({
+                "id": request_id,
+                "user_data": user_data,
+                "type": request_type,
+                "status": "pending",
+                "created_at": timestamp
+            })
+            
+        return {"message": "Solicitud creada", "request_id": request_id}
+        
+    def get_requests(self) -> List[Dict]:
+        if self.conn:
+            with self.conn.cursor() as cur:
+                cur.execute("SELECT * FROM requests ORDER BY created_at DESC")
+                return cur.fetchall()
         return self.requests
