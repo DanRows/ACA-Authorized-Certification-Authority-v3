@@ -61,6 +61,11 @@ class ACMADashboard:
                 st.warning("Por favor inicia sesión para acceder al dashboard")
                 return
 
+            # Redirigir 'main' a 'home'
+            if st.session_state.get('current_page') == 'main':
+                st.session_state.current_page = 'home'
+                st.rerun()
+
             current_page = st.session_state.get('current_page', 'home')
 
             if current_page == "home":
