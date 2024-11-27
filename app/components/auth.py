@@ -25,6 +25,16 @@ class Auth:
                     st.error("Usuario o contraseña incorrectos")
 
     def login(self, username: str, password: str) -> bool:
+        """
+        Autentica un usuario.
+
+        Args:
+            username: Nombre de usuario
+            password: Contraseña
+
+        Returns:
+            bool: True si la autenticación fue exitosa, False en caso contrario
+        """
         try:
             if username in self._users and self._users[username] == password:
                 st.session_state.authenticated = True
@@ -36,6 +46,7 @@ class Auth:
             return False
 
     def logout(self) -> None:
+        """Cierra la sesión del usuario actual"""
         try:
             st.session_state.authenticated = False
             Logger.info("Usuario desconectado")
@@ -43,4 +54,21 @@ class Auth:
             Logger.error(f"Error en logout: {str(e)}")
 
     def is_authenticated(self) -> bool:
+        """
+        Verifica si hay un usuario autenticado.
+
+        Returns:
+            bool: True si hay un usuario autenticado, False en caso contrario
+        """
         return st.session_state.get('authenticated', False)
+
+    def get_current_user(self) -> Optional[str]:
+        """
+        Obtiene el nombre del usuario actual.
+
+        Returns:
+            Optional[str]: Nombre del usuario o None si no hay usuario autenticado
+        """
+        if self.is_authenticated():
+            return st.session_state.get('username')
+        return None
