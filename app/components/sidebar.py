@@ -22,7 +22,7 @@ class Sidebar:
         """Renderiza la barra lateral"""
         try:
             with st.sidebar:
-                # Ocultar solo el header
+                # Ocultar elementos no deseados
                 st.markdown("""
                     <style>
                         header[data-testid="stHeader"] {display: none;}
@@ -30,6 +30,16 @@ class Sidebar:
                         div.stButton > button {
                             width: 100%;
                             margin-bottom: 8px;
+                        }
+                        div[data-testid="stRadio"] {display: none;}
+                        .st-emotion-cache-16txtl3 {padding-top: 1rem;}
+                        section[data-testid="stSidebar"] > div {
+                            padding-top: 0;
+                        }
+                        section[data-testid="stSidebar"] button[kind="secondary"] {
+                            border: none;
+                            padding: 0.5rem 1rem;
+                            width: 100%;
                         }
                     </style>
                 """, unsafe_allow_html=True)
