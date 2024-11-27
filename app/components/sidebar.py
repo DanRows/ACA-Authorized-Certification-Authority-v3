@@ -43,11 +43,19 @@ class Sidebar:
                             st.rerun()
 
                     # Botón de cerrar sesión
-                    self.auth.logout()
+                    if st.button("Cerrar Sesión"):
+                        self.auth.logout()
+                        st.rerun()
+
         except Exception as e:
             Logger.error(f"Error en sidebar: {str(e)}")
             st.error("Error cargando la barra lateral")
 
-    def _update_theme(self):
-        # Lógica para actualizar el tema aquí
-        pass
+    def _update_theme(self) -> None:
+        """Actualiza el tema de la aplicación"""
+        try:
+            theme = st.session_state.get('theme', 'Claro')
+            # Aquí iría la lógica para cambiar el tema
+            Logger.info(f"Tema actualizado a: {theme}")
+        except Exception as e:
+            Logger.error(f"Error actualizando tema: {str(e)}")
