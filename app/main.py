@@ -80,13 +80,21 @@ class ACMADashboard:
 
     def render_home(self) -> None:
         """Renderiza la página de inicio"""
-        from app.pages.home import render_home_page
-        render_home_page()
+        try:
+            from app.pages.home import render_home_page
+            render_home_page()
+        except Exception as e:
+            Logger.error(f"Error en página de inicio: {str(e)}")
+            st.error("Error cargando la página de inicio")
 
     def render_certificates(self) -> None:
         """Renderiza la página de certificados"""
-        from app.pages.certificates import render_certificates_page
-        render_certificates_page()
+        try:
+            from app.pages.certificates import render_certificates_page
+            render_certificates_page()
+        except Exception as e:
+            Logger.error(f"Error en página de certificados: {str(e)}")
+            st.error("Error cargando la página de certificados")
 
     def render_requests(self) -> None:
         """Renderiza la página de solicitudes"""

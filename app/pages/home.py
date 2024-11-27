@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 import pandas as pd
 import plotly.express as px
@@ -26,12 +26,12 @@ class HomePage:
     def _initialize_state(self) -> None:
         """Inicializa el estado de la página"""
         if 'home_view' not in st.session_state:
-            st.session_state.home_view = "general"
+            st.session_state.home_view = "General"
         if 'date_range' not in st.session_state:
-            st.session_state.date_range = (
+            st.session_state.date_range = [
                 datetime.now() - timedelta(days=30),
                 datetime.now()
-            )
+            ]
 
     def render(self) -> None:
         """Renderiza la página de inicio"""
@@ -41,12 +41,11 @@ class HomePage:
             # Selector de vista y rango de fechas
             col1, col2 = st.columns([1, 2])
             with col1:
-                view = st.radio(
+                st.session_state.home_view = st.radio(
                     "Vista",
                     options=["General", "Detallada"],
-                    index=0,
                     horizontal=True,
-                    key="home_view"
+                    key="home_view_radio"
                 )
             with col2:
                 st.session_state.date_range = st.date_input(
@@ -55,7 +54,7 @@ class HomePage:
                     key="home_date_range"
                 )
 
-            if view == "General":
+            if st.session_state.home_view == "General":
                 self._render_general_view()
             else:
                 self._render_detailed_view()
