@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-from app.utils.logger import Logger
+from utils.logger import Logger
 
 
 class Configuration:

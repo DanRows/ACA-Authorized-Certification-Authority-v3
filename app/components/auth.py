@@ -2,7 +2,7 @@ from typing import Dict, Optional
 
 import streamlit as st
 
-from app.utils.logger import Logger
+from utils.logger import Logger
 
 
 class Auth:
