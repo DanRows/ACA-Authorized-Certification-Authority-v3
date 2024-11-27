@@ -1,6 +1,6 @@
 import io
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from datetime import date, datetime, timedelta
+from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import plotly.express as px
@@ -73,32 +73,31 @@ class ReportGenerator:
             )
 
         with col2:
+            # Convertir datetime a date para el date_input
+            default_start = (datetime.now() - timedelta(days=30)).date()
+            default_end = datetime.now().date()
+
+            # No anotamos el tipo aquí porque st.date_input retorna su propio tipo
             dates = st.date_input(
                 "Rango de Fechas",
-                value=(
-                    datetime.now() - timedelta(days=30),
-                    datetime.now()
-                ),
+                value=(default_start, default_end),
                 help="Seleccione el período para el reporte"
             )
 
-        if st.button("Generar Reporte"):
-            try:
-                # Convertir a lista para manejar tanto fecha única como rango
-                dates_list = dates if isinstance(dates, (list, tuple)) else [dates]
+            if st.button("Generar Reporte"):
+                try:
+                    # Validar y convertir las fechas
+                    if isinstance(dates, (list, tuple)) and len(dates) == 2:
+                        start_date = datetime.combine(dates[0], datetime.min.time())
+                        end_date = datetime.combine(dates[1], datetime.max.time())
+                        date_range = (start_date, end_date)
+                        self._generate_report(report_type, date_range)
+                    else:
+                        st.error("Por favor seleccione un rango de fechas válido")
 
-                if dates_list and all(isinstance(date, datetime) for date in dates_list):
-                    start_date = datetime.combine(dates_list[0], datetime.min.time())
-                    end_date = datetime.combine(dates_list[-1], datetime.max.time())
-                else:
-                    st.error("Por favor seleccione fechas válidas")
-                    return
-
-                date_range = (start_date, end_date)
-                self._generate_report(report_type, date_range)
-            except Exception as e:
-                Logger.error(f"Error procesando fechas: {str(e)}")
-                st.error("Error al procesar el rango de fechas")
+                except Exception as e:
+                    Logger.error(f"Error procesando fechas: {str(e)}")
+                    st.error("Error al procesar el rango de fechas")
 
     def _render_report_preview(self) -> None:
         """Renderiza vista previa del reporte"""

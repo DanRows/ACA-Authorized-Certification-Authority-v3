@@ -11,6 +11,19 @@ class Auth:
             "admin": "admin123"  # En producción usar hash seguro
         }
 
+    def login_form(self) -> None:
+        """Renderiza el formulario de login"""
+        with st.form("login_form"):
+            username = st.text_input("Usuario")
+            password = st.text_input("Contraseña", type="password")
+
+            if st.form_submit_button("Iniciar Sesión"):
+                if self.login(username, password):
+                    st.success("Sesión iniciada correctamente")
+                    st.rerun()
+                else:
+                    st.error("Usuario o contraseña incorrectos")
+
     def login(self, username: str, password: str) -> bool:
         try:
             if username in self._users and self._users[username] == password:
