@@ -1,3 +1,5 @@
+import base64
+from pathlib import Path
 from typing import Dict, Optional
 
 import streamlit as st
@@ -18,33 +20,59 @@ class Sidebar:
         if 'authenticated' not in st.session_state:
             st.session_state.authenticated = False
 
+    def _get_base64_logo(self) -> str:
+        """Obtiene el logo en formato base64"""
+        try:
+            logo_path = Path(__file__).parent.parent.parent / "assets" / "procymi_logo.png"
+            with open(logo_path, "rb") as f:
+                data = f.read()
+            return base64.b64encode(data).decode()
+        except Exception as e:
+            Logger.error(f"Error cargando logo: {str(e)}")
+            return ""
+
     def render(self) -> None:
         """Renderiza la barra lateral"""
         try:
             with st.sidebar:
-                # Ocultar elementos no deseados
-                st.markdown("""
+                # Ocultar elementos no deseados y estilizar
+                logo_base64 = self._get_base64_logo()
+                st.markdown(f"""
                     <style>
-                        header[data-testid="stHeader"] {display: none;}
-                        div.block-container {padding-top: 0;}
-                        div.stButton > button {
+                        header[data-testid="stHeader"] {{display: none;}}
+                        div.block-container {{padding-top: 0;}}
+                        div.stButton > button {{
                             width: 100%;
                             margin-bottom: 8px;
-                        }
-                        div[data-testid="stSidebarNav"] {display: none !important;}
-                        ul[data-testid="stSidebarNavItems"] {display: none !important;}
-                        div[data-testid="stSidebarNavSeparator"] {display: none !important;}
-                        .st-emotion-cache-bjn8wh {display: none !important;}
-                        .st-emotion-cache-1ekxtbt {display: none !important;}
-                        section[data-testid="stSidebar"] > div {
+                        }}
+                        div[data-testid="stSidebarNav"] {{display: none !important;}}
+                        ul[data-testid="stSidebarNavItems"] {{display: none !important;}}
+                        div[data-testid="stSidebarNavSeparator"] {{display: none !important;}}
+                        .st-emotion-cache-bjn8wh {{display: none !important;}}
+                        .st-emotion-cache-1ekxtbt {{display: none !important;}}
+                        section[data-testid="stSidebar"] > div {{
                             padding-top: 0;
-                        }
-                        section[data-testid="stSidebar"] button[kind="secondary"] {
+                        }}
+                        section[data-testid="stSidebar"] button[kind="secondary"] {{
                             border: none;
                             padding: 0.5rem 1rem;
                             width: 100%;
-                        }
+                        }}
+                        .logo-container {{
+                            display: flex;
+                            justify-content: center;
+                            padding: 1rem 0;
+                            background-color: #ffffff;
+                            margin-bottom: 2rem;
+                        }}
+                        .logo-container img {{
+                            max-width: 200px;
+                            height: auto;
+                        }}
                     </style>
+                    <div class="logo-container">
+                        <img src="data:image/png;base64,{logo_base64}" alt="PROCyMI Logo"/>
+                    </div>
                 """, unsafe_allow_html=True)
 
                 if not st.session_state.authenticated:
