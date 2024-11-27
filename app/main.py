@@ -1,22 +1,25 @@
+import os
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import streamlit as st
 
-from app.components.auth import Auth
-from app.components.certificados import Certificados
-from app.components.chat import Chat
-from app.components.metrics_dashboard import MetricsDashboard
-from app.components.notifications import Notifications
-from app.components.report_generator import ReportGenerator
-from app.components.sidebar import Sidebar
-from app.components.solicitudes import Solicitudes
 from app.config.configuration import Configuration
 from app.utils.logger import Logger
 
 
 class ACMADashboard:
     def __init__(self):
+        # Importaciones locales para evitar ciclos
+        from app.components.auth import Auth
+        from app.components.certificados import Certificados
+        from app.components.chat import Chat
+        from app.components.metrics_dashboard import MetricsDashboard
+        from app.components.notifications import Notifications
+        from app.components.report_generator import ReportGenerator
+        from app.components.sidebar import Sidebar
+        from app.components.solicitudes import Solicitudes
+
         self.config = Configuration()
         self.auth = Auth()
         self.sidebar = Sidebar()
@@ -90,8 +93,15 @@ class ACMADashboard:
 
 def main():
     """Función principal de la aplicación"""
-    dashboard = ACMADashboard()
-    dashboard.render()
+    try:
+        # Cambiar al directorio del proyecto
+        os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+        dashboard = ACMADashboard()
+        dashboard.render()
+    except Exception as e:
+        Logger.error(f"Error en main: {str(e)}")
+        st.error("Error iniciando la aplicación")
 
 
 if __name__ == "__main__":
