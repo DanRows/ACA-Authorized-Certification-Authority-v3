@@ -11,8 +11,23 @@ class Certificados:
     def get_total(self) -> int:
         return len(self._certificates)
 
-    def get_certificates(self) -> List[Dict]:
-        return self._certificates
+    def get_certificates(self, limit: Optional[int] = None) -> List[Dict]:
+        """
+        Obtiene la lista de certificados
+        Args:
+            limit: Límite opcional de certificados a retornar
+        """
+        try:
+            if limit is not None:
+                return sorted(
+                    self._certificates,
+                    key=lambda x: x['created_at'],
+                    reverse=True
+                )[:limit]
+            return self._certificates
+        except Exception as e:
+            Logger.error(f"Error obteniendo certificados: {str(e)}")
+            return []
 
     def add_certificate(self, certificate: Dict) -> None:
         try:

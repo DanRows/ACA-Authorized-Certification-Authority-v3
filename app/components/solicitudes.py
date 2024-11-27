@@ -32,3 +32,15 @@ class Solicitudes:
         except Exception as e:
             Logger.error(f"Error al buscar solicitud {request_id}: {str(e)}")
             return None
+
+    def get_provider_stats(self) -> Dict[str, int]:
+        """Obtiene estadísticas por proveedor"""
+        try:
+            providers = {}
+            for request in self._requests:
+                provider = request.get('provider', 'unknown')
+                providers[provider] = providers.get(provider, 0) + 1
+            return providers
+        except Exception as e:
+            Logger.error(f"Error obteniendo estadísticas de proveedores: {str(e)}")
+            return {}

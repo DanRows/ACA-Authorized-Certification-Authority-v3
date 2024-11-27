@@ -6,12 +6,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from components.certificados import Certificados
-from components.dashboard_widgets import DashboardWidgets
-from components.metrics_dashboard import MetricsDashboard
-from components.solicitudes import Solicitudes
-from utils.cache import cached
-from utils.logger import Logger
+from app.components.certificados import Certificados
+from app.components.dashboard_widgets import DashboardWidgets
+from app.components.metrics_dashboard import MetricsDashboard
+from app.components.solicitudes import Solicitudes
+from app.utils.cache import CacheManager
+from app.utils.logger import Logger
 
 
 class HomePage:
@@ -20,6 +20,7 @@ class HomePage:
         self.certificados = Certificados()
         self.metrics = MetricsDashboard()
         self.widgets = DashboardWidgets(self.solicitudes, self.certificados)
+        self.cache_manager = CacheManager()
         self._initialize_state()
 
     def _initialize_state(self) -> None:
@@ -62,22 +63,58 @@ class HomePage:
             Logger.error(f"Error en página de inicio: {str(e)}")
             st.error("Error cargando el panel principal")
 
-    @cached(expire_in=300)
+    def _calculate_success_rate(self, requests: List[Dict]) -> float:
+        if not requests:
+            return 100.0
+        completed = len([r for r in requests if r['status'] == 'completed'])
+        return round((completed / len(requests)) * 100, 2)
+
     def _get_metrics_summary(self) -> Dict:
         """Obtiene resumen de métricas con caché"""
+        cache_key = "metrics_summary"
+        cached_value = self.cache_manager.get(cache_key)
+        if cached_value:
+            return cached_value
+
         try:
             requests = self.solicitudes.get_requests()
             certificates = self.certificados.get_certificates()
 
-            return {
+            metrics = {
                 'total_requests': len(requests),
                 'pending_requests': len([r for r in requests if r['status'] == 'pending']),
                 'total_certificates': len(certificates),
                 'success_rate': self._calculate_success_rate(requests)
             }
+            return metrics
         except Exception as e:
             Logger.error(f"Error obteniendo métricas: {str(e)}")
             return {}
+
+    def _get_recent_data(self) -> Dict:
+        """Obtiene datos recientes"""
+        cache_key = "recent_data"
+        cached_value = self.cache_manager.get(cache_key)
+        if cached_value:
+            return cached_value
+
+        requests = self.solicitudes.get_requests()
+        certificates = self.certificados.get_certificates()
+
+        # Tomar solo los 10 más recientes
+        return {
+            'requests': sorted(requests, key=lambda x: x['created_at'], reverse=True)[:10],
+            'certificates': sorted(certificates, key=lambda x: x['created_at'], reverse=True)[:10]
+        }
+
+    def _get_provider_stats(self) -> Dict:
+        """Obtiene estadísticas por proveedor"""
+        requests = self.solicitudes.get_requests()
+        providers = {}
+        for request in requests:
+            provider = request.get('provider', 'unknown')
+            providers[provider] = providers.get(provider, 0) + 1
+        return providers
 
     def _render_general_view(self) -> None:
         """Renderiza vista general"""
@@ -107,14 +144,6 @@ class HomePage:
         # Análisis detallado
         st.header("Análisis Detallado")
         self._render_detailed_analysis()
-
-    @cached(expire_in=300)
-    def _get_recent_data(self) -> Dict:
-        """Obtiene datos recientes con caché"""
-        return {
-            'requests': self.solicitudes.get_requests(limit=10),
-            'certificates': self.certificados.get_certificates(limit=10)
-        }
 
     def _render_activity_timeline(self, data: Dict) -> None:
         """Renderiza línea de tiempo de actividad"""
@@ -157,7 +186,7 @@ class HomePage:
 
     def _render_provider_distribution(self) -> None:
         """Renderiza distribución por proveedor"""
-        providers = self.solicitudes.get_provider_stats()
+        providers = self._get_provider_stats()
         fig = px.pie(
             values=list(providers.values()),
             names=list(providers.keys()),

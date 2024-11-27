@@ -30,6 +30,6 @@ ACMA Dashboard es una aplicación modular y escalable diseñada para gestionar s
    - Diseño responsivo optimizado para dispositivos móviles
    - Personalización de temas y preferencias
 
-## Instalación
+## Instalación y Ejecución
 
-1. Clonar el repositorio:
+1. Crear entorno virtual:
