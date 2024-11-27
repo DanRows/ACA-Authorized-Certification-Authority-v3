@@ -4,17 +4,16 @@ from typing import Dict, List, Optional
 
 import streamlit as st
 
-from app import Configuration, Logger  # Importar desde el paquete raíz
-from app.components import (  # Importar todos los componentes desde el subpaquete
-    Auth,
-    Certificados,
-    Chat,
-    MetricsDashboard,
-    Notifications,
-    ReportGenerator,
-    Sidebar,
-    Solicitudes,
-)
+from app.components.auth import Auth
+from app.components.certificados import Certificados
+from app.components.chat import Chat
+from app.components.metrics_dashboard import MetricsDashboard
+from app.components.notifications import Notifications
+from app.components.report_generator import ReportGenerator
+from app.components.sidebar import Sidebar
+from app.components.solicitudes import Solicitudes
+from app.config.configuration import Configuration
+from app.utils.logger import Logger
 
 
 class ACMADashboard:
