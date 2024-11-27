@@ -5,20 +5,20 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from components.auth import Auth
-from components.certificados import Certificados
-from components.chat import Chat
-from components.metrics_dashboard import MetricsDashboard
-from components.notifications import Notifications
-from components.report_generator import ReportGenerator
-from components.sidebar import Sidebar
-from components.solicitudes import Solicitudes
-from config.configuration import Configuration
-from services.factory import ServiceFactory
-from services.metrics_service import MetricsService
-from utils.cache import cached
-from utils.helpers import get_database_connection, validate_input
-from utils.logger import Logger
+from app.components.auth import Auth
+from app.components.certificados import Certificados
+from app.components.chat import Chat
+from app.components.metrics_dashboard import MetricsDashboard
+from app.components.notifications import Notifications
+from app.components.report_generator import ReportGenerator
+from app.components.sidebar import Sidebar
+from app.components.solicitudes import Solicitudes
+from app.config.configuration import Configuration
+from app.services.factory import ServiceFactory
+from app.services.metrics_service import MetricsService
+from app.utils.cache import CacheManager
+from app.utils.helpers import get_database_connection, validate_input
+from app.utils.logger import Logger
 
 
 class ACMADashboard:

@@ -5,9 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from components.dashboard_widgets import DashboardWidgets
-from services.metrics_service import MetricsService
-from utils.logger import Logger
+from app.components.dashboard_widgets import DashboardWidgets
+from app.services.metrics_service import MetricsService
+from app.utils.logger import Logger
 
 
 class MetricsDashboard:
