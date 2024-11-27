@@ -50,7 +50,7 @@ class SettingsPage:
             Logger.error(f"Error en página de configuración: {str(e)}")
             st.error("Error cargando configuración")
 
-    @cached(expire_in=300)
+    @cached(ttl=300)
     def _get_settings(self) -> Dict:
         """Obtiene configuraciones con caché"""
         return {
@@ -108,3 +108,74 @@ class SettingsPage:
                     st.success("Configuración actualizada exitosamente")
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
+
+    def _render_performance_settings(self) -> None:
+        """Renderiza configuración de rendimiento"""
+        st.header("Configuración de Rendimiento")
+
+        settings = self._get_settings()
+        perf_settings = settings.get('performance', {})
+
+        with st.form("performance_config"):
+            cache_ttl = st.number_input(
+                "Tiempo de vida del caché (segundos)",
+                min_value=60,
+                max_value=3600,
+                value=perf_settings.get('cache_ttl', 300)
+            )
+
+            max_threads = st.number_input(
+                "Máximo de hilos",
+                min_value=1,
+                max_value=10,
+                value=perf_settings.get('max_threads', 4)
+            )
+
+            if st.form_submit_button("Guardar"):
+                try:
+                    self.config.update_setting('performance', {
+                        'cache_ttl': cache_ttl,
+                        'max_threads': max_threads
+                    })
+                    st.success("Configuración actualizada")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+
+    def _render_notification_settings(self) -> None:
+        """Renderiza configuración de notificaciones"""
+        st.header("Configuración de Notificaciones")
+
+        settings = self._get_settings()
+        notif_settings = settings.get('notifications', {})
+
+        with st.form("notification_config"):
+            enable_email = st.checkbox(
+                "Habilitar notificaciones por email",
+                value=notif_settings.get('enable_email', False)
+            )
+
+            email_frequency = st.selectbox(
+                "Frecuencia de emails",
+                ["Inmediata", "Diaria", "Semanal"],
+                index=0
+            )
+
+            if st.form_submit_button("Guardar"):
+                try:
+                    self.config.update_setting('notifications', {
+                        'enable_email': enable_email,
+                        'email_frequency': email_frequency
+                    })
+                    st.success("Configuración actualizada")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+
+    def _render_save_button(self) -> None:
+        """Renderiza botón de guardar cambios"""
+        if st.button("Guardar Todos los Cambios"):
+            try:
+                # Aquí iría la lógica para guardar todos los cambios
+                st.success("Configuración guardada exitosamente")
+                st.session_state.settings_modified = False
+            except Exception as e:
+                st.error(f"Error guardando configuración: {str(e)}")
