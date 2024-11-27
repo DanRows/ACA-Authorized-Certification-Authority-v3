@@ -80,23 +80,24 @@ class ACMADashboard:
 
     def render_home(self) -> None:
         """Renderiza la página de inicio"""
-        st.title("ACMA Dashboard")
-        self.metrics_dashboard.render()
+        from app.pages.home import render_home_page
+        render_home_page()
 
     def render_certificates(self) -> None:
         """Renderiza la página de certificados"""
-        st.title("Certificados")
-        # Implementar vista de certificados
+        from app.pages.certificates import render_certificates_page
+        render_certificates_page()
 
     def render_requests(self) -> None:
         """Renderiza la página de solicitudes"""
-        st.title("Solicitudes")
-        # Implementar vista de solicitudes
+        from app.pages.requests import render_requests_page
+        render_requests_page()
 
     def render_settings(self) -> None:
         """Renderiza la página de configuración"""
-        st.title("Configuración")
-        # Implementar vista de configuración
+        from app.pages.settings import SettingsPage
+        settings_page = SettingsPage()
+        settings_page.render()
 
 
 def main():
