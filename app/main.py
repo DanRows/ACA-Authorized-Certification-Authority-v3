@@ -61,21 +61,17 @@ class ACMADashboard:
                 st.warning("Por favor inicia sesión para acceder al dashboard")
                 return
 
-            # Redirigir 'main' a 'home'
-            if st.session_state.get('current_page') == 'main':
-                st.session_state.current_page = 'home'
-                st.rerun()
-
             current_page = st.session_state.get('current_page', 'home')
 
+            # Renderizar la página correspondiente
             if current_page == "home":
-                self.render_home()
+                self.metrics_dashboard.render()
             elif current_page == "certificates":
-                self.render_certificates()
+                self.certificados_page()
             elif current_page == "requests":
-                self.render_requests()
+                self.requests_page()
             elif current_page == "settings":
-                self.render_settings()
+                self.settings_page()
             else:
                 st.error("Página no encontrada")
 
@@ -83,30 +79,36 @@ class ACMADashboard:
             Logger.error(f"Error en dashboard: {str(e)}")
             st.error("Error cargando el dashboard")
 
-    def render_home(self) -> None:
-        """Renderiza la página de inicio"""
-        try:
-            from app.pages.home import render_home_page
-            render_home_page()
-        except Exception as e:
-            Logger.error(f"Error en página de inicio: {str(e)}")
-            st.error("Error cargando la página de inicio")
-
-    def render_certificates(self) -> None:
+    def certificados_page(self) -> None:
         """Renderiza la página de certificados"""
         try:
-            from app.pages.certificates import render_certificates_page
-            render_certificates_page()
+            st.title("Gestión de Certificados")
+            certificates = self.certificados.get_certificates()
+
+            if not certificates:
+                st.info("No hay certificados disponibles")
+                return
+
+            for cert in certificates:
+                with st.expander(f"Certificado {cert['id']}", expanded=False):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"Fecha: {cert['created_at']}")
+                        st.write(f"Estado: {cert.get('status', 'N/A')}")
+                    with col2:
+                        if cert.get('details'):
+                            st.json(cert['details'])
+
         except Exception as e:
             Logger.error(f"Error en página de certificados: {str(e)}")
-            st.error("Error cargando la página de certificados")
+            st.error("Error cargando certificados")
 
-    def render_requests(self) -> None:
+    def requests_page(self) -> None:
         """Renderiza la página de solicitudes"""
         from app.pages.requests import render_requests_page
         render_requests_page()
 
-    def render_settings(self) -> None:
+    def settings_page(self) -> None:
         """Renderiza la página de configuración"""
         from app.pages.settings import SettingsPage
         settings_page = SettingsPage()
@@ -117,7 +119,7 @@ def main():
     """Función principal de la aplicación"""
     try:
         # Cambiar al directorio del proyecto
-        os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        os.chdir(project_dir)
 
         dashboard = ACMADashboard()
         dashboard.render()
