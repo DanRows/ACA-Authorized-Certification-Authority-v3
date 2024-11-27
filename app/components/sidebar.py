@@ -44,8 +44,17 @@ class Sidebar:
                             padding: 0.5rem 1rem;
                             width: 100%;
                         }
+                        img {
+                            display: block;
+                            margin: 0 auto;
+                            max-width: 200px;
+                            padding: 1rem 0;
+                        }
                     </style>
                 """, unsafe_allow_html=True)
+
+                # Logo
+                st.image("assets/procymi_logo.png", use_column_width=True)
 
                 if not st.session_state.authenticated:
                     # Solo mostrar el formulario de login sin navegación
