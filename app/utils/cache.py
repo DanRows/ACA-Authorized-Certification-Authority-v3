@@ -10,9 +10,10 @@ from app.utils.logger import Logger
 class CacheManager:
     def __init__(self):
         self.redis_client = self._initialize_redis()
-        self.local_cache = {}
+        self.local_cache: Dict = {}
 
     def _initialize_redis(self) -> Optional[redis.Redis]:
+        """Inicializa la conexión a Redis"""
         try:
             return redis.Redis(
                 host='localhost',
@@ -25,7 +26,15 @@ class CacheManager:
             Logger.warning(f"Redis no disponible: {e}")
             return None
 
-    def _get_from_redis(self, key: str) -> Any:
+    def get(self, key: str) -> Any:
+        """Obtiene un valor del caché"""
+        redis_value = self._get_from_redis(key)
+        if redis_value is not None:
+            return redis_value
+        return self._get_from_local(key)
+
+    def _get_from_redis(self, key: str) -> Optional[Any]:
+        """Obtiene un valor de Redis"""
         if self.redis_client is None:
             return None
         try:
@@ -35,19 +44,15 @@ class CacheManager:
             Logger.error(f"Error al obtener de Redis: {e}")
             return None
 
-    def _get_from_local(self, key: str) -> Any:
+    def _get_from_local(self, key: str) -> Optional[Any]:
+        """Obtiene un valor del caché local"""
         return self.local_cache.get(key)
-
-    def get(self, key: str) -> Any:
-        redis_value = self._get_from_redis(key)
-        if redis_value is not None:
-            return redis_value
-        return self._get_from_local(key)
 
 
 def cached(ttl: int = 3600) -> Callable:
     """
-    Decorador para cachear resultados de funciones
+    Decorador para cachear resultados de funciones.
+
     Args:
         ttl: Tiempo de vida del caché en segundos
     """
