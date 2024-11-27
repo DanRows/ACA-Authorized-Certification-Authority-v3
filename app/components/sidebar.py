@@ -20,18 +20,20 @@ class Sidebar:
         """Renderiza la barra lateral"""
         try:
             with st.sidebar:
+                # Ocultar elementos no deseados
+                st.markdown("""
+                    <style>
+                        [data-testid="stSidebarNav"] {display: none;}
+                        div.st-emotion-cache-1ekxtbt {display: none;}
+                        div.st-emotion-cache-16txtl3 {padding-top: 1rem;}
+                        header[data-testid="stHeader"] {display: none;}
+                    </style>
+                """, unsafe_allow_html=True)
+
                 if not st.session_state.get('authenticated', False):
+                    # Solo mostrar el formulario de login
                     self.auth.login_form()
                 else:
-                    # Ocultar título y tema
-                    st.markdown("""
-                        <style>
-                            [data-testid="stSidebarNav"] {display: none;}
-                            div.st-emotion-cache-1ekxtbt {display: none;}
-                            div.st-emotion-cache-16txtl3 {padding-top: 1rem;}
-                        </style>
-                    """, unsafe_allow_html=True)
-
                     # Menú de navegación
                     with st.container():
                         # Definir las páginas disponibles
@@ -79,13 +81,13 @@ class Sidebar:
 
         except Exception as e:
             Logger.error(f"Error en sidebar: {str(e)}")
-            st.error("Error cargando la barra lateral")
+            # Mostrar error de forma más discreta
+            st.sidebar.warning("Error en el menú de navegación")
 
     def _update_theme(self) -> None:
         """Actualiza el tema de la aplicación"""
         try:
             theme = st.session_state.get('theme', 'Claro')
-            # Aquí iría la lógica para cambiar el tema
             Logger.info(f"Tema actualizado a: {theme}")
         except Exception as e:
             Logger.error(f"Error actualizando tema: {str(e)}")
