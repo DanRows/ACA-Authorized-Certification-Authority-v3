@@ -12,14 +12,70 @@ from app.utils.logger import Logger
 
 
 class MetricsDashboard:
+    _instance = None
+    _initialized = False
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        self.solicitudes = Solicitudes()
-        self.certificados = Certificados()
-        self.widgets = DashboardWidgets(self.solicitudes, self.certificados)
+        if not self._initialized:
+            try:
+                self.solicitudes = Solicitudes()
+                self.certificados = Certificados()
+                self.widgets = DashboardWidgets(self.solicitudes, self.certificados)
+                # Agregar datos de ejemplo solo una vez
+                self._add_sample_data()
+                self.__class__._initialized = True
+            except Exception as e:
+                Logger.error(f"Error inicializando MetricsDashboard: {str(e)}")
+                raise
+
+    def _add_sample_data(self) -> None:
+        """Agrega datos de ejemplo para desarrollo"""
+        try:
+            # Verificar si ya hay datos
+            if len(self.solicitudes.get_requests()) == 0:
+                # Agregar algunas solicitudes de ejemplo
+                self.solicitudes.add_request({
+                    'id': '001',
+                    'status': 'pending',
+                    'provider': 'openai',
+                    'created_at': datetime.now()
+                })
+                self.solicitudes.add_request({
+                    'id': '002',
+                    'status': 'completed',
+                    'provider': 'vertex',
+                    'created_at': datetime.now()
+                })
+
+            if len(self.certificados.get_certificates()) == 0:
+                # Agregar algunos certificados de ejemplo
+                self.certificados.add_certificate({
+                    'id': '001',
+                    'status': 'active',
+                    'created_at': datetime.now(),
+                    'details': {'type': 'basic'}
+                })
+                self.certificados.add_certificate({
+                    'id': '002',
+                    'status': 'pending',
+                    'created_at': datetime.now(),
+                    'details': {'type': 'advanced'}
+                })
+        except Exception as e:
+            Logger.warning(f"No se pudieron agregar datos de ejemplo: {str(e)}")
 
     def render(self) -> None:
         """Renderiza el dashboard de métricas"""
         try:
+            # Asegurarse de que haya datos
+            if len(self.solicitudes.get_requests()) == 0:
+                self._add_sample_data()
+
             # Métricas principales
             self.widgets.show_metrics_card()
 
@@ -56,6 +112,10 @@ class MetricsDashboard:
         """Renderiza distribución por proveedor"""
         try:
             providers = self.solicitudes.get_provider_stats()
+            if not providers:
+                st.info("No hay datos de proveedores para mostrar")
+                return
+
             fig = px.pie(
                 values=list(providers.values()),
                 names=list(providers.keys()),
@@ -70,6 +130,10 @@ class MetricsDashboard:
         """Renderiza distribución por estado"""
         try:
             requests = self.solicitudes.get_requests()
+            if not requests:
+                st.info("No hay datos de estados para mostrar")
+                return
+
             status_counts = {}
             for request in requests:
                 status = request.get('status', 'unknown')

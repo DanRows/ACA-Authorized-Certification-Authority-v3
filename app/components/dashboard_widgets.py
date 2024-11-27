@@ -10,10 +10,26 @@ from app.utils.logger import Logger
 
 
 class DashboardWidgets:
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, solicitudes: Solicitudes, certificados: Certificados):
-        self.solicitudes = solicitudes
-        self.certificados = certificados
-        self._add_sample_data()
+        if not self._initialized:
+            try:
+                self.solicitudes = solicitudes
+                self.certificados = certificados
+                # Agregar datos de ejemplo solo una vez
+                if len(self.solicitudes.get_requests()) == 0:
+                    self._add_sample_data()
+                self.__class__._initialized = True
+            except Exception as e:
+                Logger.error(f"Error inicializando DashboardWidgets: {str(e)}")
+                raise
 
     def _add_sample_data(self) -> None:
         """Agrega datos de ejemplo para desarrollo"""
@@ -51,6 +67,10 @@ class DashboardWidgets:
     def show_metrics_card(self) -> None:
         """Muestra tarjeta de métricas principales"""
         try:
+            # Asegurarse de que haya datos
+            if len(self.solicitudes.get_requests()) == 0:
+                self._add_sample_data()
+
             col1, col2, col3 = st.columns(3)
 
             with col1:
