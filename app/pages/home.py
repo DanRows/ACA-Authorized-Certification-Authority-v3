@@ -43,7 +43,8 @@ class HomePage:
             with col1:
                 view = st.radio(
                     "Vista",
-                    ["General", "Detallada"],
+                    options=["General", "Detallada"],
+                    index=0,
                     horizontal=True,
                     key="home_view"
                 )

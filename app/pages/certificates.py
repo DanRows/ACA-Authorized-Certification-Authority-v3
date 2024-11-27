@@ -78,3 +78,6 @@ def render_certificates_page():
     """Punto de entrada para la página de certificados"""
     page = CertificatesPage()
     page.render()
+
+# Asegurarnos de que la función esté disponible para importar
+__all__ = ['CertificatesPage', 'render_certificates_page']
