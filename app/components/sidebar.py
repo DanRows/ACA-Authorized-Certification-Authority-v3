@@ -15,6 +15,8 @@ class Sidebar:
         """Inicializa el estado de la barra lateral"""
         if 'current_page' not in st.session_state:
             st.session_state.current_page = "home"
+        if 'authenticated' not in st.session_state:
+            st.session_state.authenticated = False
 
     def render(self) -> None:
         """Renderiza la barra lateral"""
@@ -30,7 +32,7 @@ class Sidebar:
                     </style>
                 """, unsafe_allow_html=True)
 
-                if not st.session_state.get('authenticated', False):
+                if not st.session_state.authenticated:
                     # Solo mostrar el formulario de login
                     self.auth.login_form()
                 else:
@@ -40,29 +42,42 @@ class Sidebar:
                         pages: Dict[str, Dict] = {
                             "home": {
                                 "name": "Inicio",
-                                "icon": "🏠"
+                                "icon": "🏠",
+                                "order": 1
                             },
                             "certificates": {
                                 "name": "Certificados",
-                                "icon": "📜"
+                                "icon": "📜",
+                                "order": 2
                             },
                             "requests": {
                                 "name": "Solicitudes",
-                                "icon": "📝"
+                                "icon": "📝",
+                                "order": 3
                             },
                             "settings": {
                                 "name": "Configuración",
-                                "icon": "⚙️"
+                                "icon": "⚙️",
+                                "order": 4
                             }
                         }
 
+                        # Ordenar páginas
+                        sorted_pages = sorted(
+                            pages.items(),
+                            key=lambda x: x[1]['order']
+                        )
+
                         # Crear botones de navegación
-                        for page_id, page_info in pages.items():
+                        for page_id, page_info in sorted_pages:
+                            button_key = f"nav_{page_id}"
+                            is_active = st.session_state.current_page == page_id
+
                             if st.button(
                                 f"{page_info['icon']} {page_info['name']}",
-                                key=f"nav_{page_id}",
+                                key=button_key,
                                 use_container_width=True,
-                                type="primary" if st.session_state.current_page == page_id else "secondary"
+                                type="primary" if is_active else "secondary"
                             ):
                                 st.session_state.current_page = page_id
                                 st.rerun()
@@ -77,6 +92,7 @@ class Sidebar:
                             type="secondary"
                         ):
                             self.auth.logout()
+                            st.session_state.current_page = "home"
                             st.rerun()
 
         except Exception as e:
