@@ -4,20 +4,23 @@ from typing import Dict, List, Optional
 
 import streamlit as st
 
-from app.components.auth import Auth
-from app.components.certificados import Certificados
-from app.components.chat import Chat
-from app.components.metrics_dashboard import MetricsDashboard
-from app.components.notifications import Notifications
-from app.components.report_generator import ReportGenerator
-from app.components.sidebar import Sidebar
-from app.components.solicitudes import Solicitudes
+# Importaciones locales para evitar ciclos
 from app.config.configuration import Configuration
 from app.utils.logger import Logger
 
 
 class ACMADashboard:
     def __init__(self):
+        # Importaciones locales dentro del __init__
+        from app.components.auth import Auth
+        from app.components.certificados import Certificados
+        from app.components.chat import Chat
+        from app.components.metrics_dashboard import MetricsDashboard
+        from app.components.notifications import Notifications
+        from app.components.report_generator import ReportGenerator
+        from app.components.sidebar import Sidebar
+        from app.components.solicitudes import Solicitudes
+
         self.config = Configuration()
         self.auth = Auth()
         self.sidebar = Sidebar()

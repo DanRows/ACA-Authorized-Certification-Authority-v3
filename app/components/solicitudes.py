@@ -22,7 +22,7 @@ class Solicitudes:
         Obtiene todas las solicitudes.
 
         Returns:
-            List[Dict]: Lista de solicitudes
+            List[Dict]: Lista de solicitudes ordenadas por fecha
         """
         try:
             return sorted(
@@ -44,6 +44,8 @@ class Solicitudes:
         try:
             if 'created_at' not in request:
                 request['created_at'] = datetime.now()
+            if 'status' not in request:
+                request['status'] = 'pending'
             self._requests.append(request)
             Logger.info(f"Solicitud agregada: {request.get('id', 'unknown')}")
         except Exception as e:
@@ -130,4 +132,21 @@ class Solicitudes:
             return stats
         except Exception as e:
             Logger.error(f"Error obteniendo estadísticas de proveedores: {str(e)}")
+            return {}
+
+    def get_status_stats(self) -> Dict[str, int]:
+        """
+        Obtiene estadísticas por estado.
+
+        Returns:
+            Dict[str, int]: Diccionario con conteo por estado
+        """
+        try:
+            stats = {}
+            for request in self._requests:
+                status = request.get('status', 'unknown')
+                stats[status] = stats.get(status, 0) + 1
+            return stats
+        except Exception as e:
+            Logger.error(f"Error obteniendo estadísticas de estados: {str(e)}")
             return {}

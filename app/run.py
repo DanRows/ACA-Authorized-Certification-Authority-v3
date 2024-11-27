@@ -1,13 +1,20 @@
 import os
+import sys
+from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
 
-from app.main import main
+# Agregar el directorio raíz al PYTHONPATH
+root_dir = Path(__file__).parent.parent
+sys.path.append(str(root_dir))
+
+from app.main import main  # noqa: E402
 
 if __name__ == "__main__":
     try:
-        os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        # Cambiar al directorio del proyecto
+        os.chdir(root_dir)
 
         load_dotenv()
         st.set_page_config(

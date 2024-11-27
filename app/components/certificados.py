@@ -48,6 +48,8 @@ class Certificados:
         try:
             if 'created_at' not in certificate:
                 certificate['created_at'] = datetime.now()
+            if 'status' not in certificate:
+                certificate['status'] = 'pending'
             self._certificates.append(certificate)
             Logger.info(f"Certificado agregado: {certificate.get('id', 'unknown')}")
         except Exception as e:
@@ -118,3 +120,20 @@ class Certificados:
         except Exception as e:
             Logger.error(f"Error eliminando certificado {certificate_id}: {str(e)}")
             return False
+
+    def get_status_stats(self) -> Dict[str, int]:
+        """
+        Obtiene estadísticas por estado.
+
+        Returns:
+            Dict[str, int]: Diccionario con conteo por estado
+        """
+        try:
+            stats = {}
+            for cert in self._certificates:
+                status = cert.get('status', 'unknown')
+                stats[status] = stats.get(status, 0) + 1
+            return stats
+        except Exception as e:
+            Logger.error(f"Error obteniendo estadísticas de estados: {str(e)}")
+            return {}
