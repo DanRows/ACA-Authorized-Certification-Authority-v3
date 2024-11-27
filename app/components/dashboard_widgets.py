@@ -13,6 +13,40 @@ class DashboardWidgets:
     def __init__(self, solicitudes: Solicitudes, certificados: Certificados):
         self.solicitudes = solicitudes
         self.certificados = certificados
+        self._add_sample_data()
+
+    def _add_sample_data(self) -> None:
+        """Agrega datos de ejemplo para desarrollo"""
+        try:
+            # Agregar algunas solicitudes de ejemplo
+            self.solicitudes.add_request({
+                'id': '001',
+                'status': 'pending',
+                'provider': 'openai',
+                'created_at': datetime.now()
+            })
+            self.solicitudes.add_request({
+                'id': '002',
+                'status': 'completed',
+                'provider': 'vertex',
+                'created_at': datetime.now()
+            })
+
+            # Agregar algunos certificados de ejemplo
+            self.certificados.add_certificate({
+                'id': '001',
+                'status': 'active',
+                'created_at': datetime.now(),
+                'details': {'type': 'basic'}
+            })
+            self.certificados.add_certificate({
+                'id': '002',
+                'status': 'pending',
+                'created_at': datetime.now(),
+                'details': {'type': 'advanced'}
+            })
+        except Exception as e:
+            Logger.warning(f"No se pudieron agregar datos de ejemplo: {str(e)}")
 
     def show_metrics_card(self) -> None:
         """Muestra tarjeta de métricas principales"""
@@ -40,6 +74,11 @@ class DashboardWidgets:
         try:
             st.subheader("Línea de Tiempo de Solicitudes")
             requests = self.solicitudes.get_requests()
+
+            if not requests:
+                st.info("No hay solicitudes para mostrar")
+                return
+
             dates = [r.get('created_at', datetime.now()) for r in requests]
 
             fig = go.Figure()
@@ -59,6 +98,10 @@ class DashboardWidgets:
         try:
             st.subheader("Estadísticas por Proveedor")
             providers = self.solicitudes.get_provider_stats()
+
+            if not providers:
+                st.info("No hay datos de proveedores para mostrar")
+                return
 
             fig = go.Figure(data=[
                 go.Bar(
@@ -85,7 +128,7 @@ class DashboardWidgets:
         try:
             requests = self.solicitudes.get_requests()
             if not requests:
-                return 100.0
+                return 0.0
             completed = len([r for r in requests if r['status'] == 'completed'])
             return round((completed / len(requests)) * 100, 2)
         except Exception as e:
