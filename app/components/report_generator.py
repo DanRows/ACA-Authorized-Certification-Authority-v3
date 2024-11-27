@@ -1,6 +1,6 @@
 import io
-from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Union
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 import plotly.express as px
@@ -15,9 +15,9 @@ from app.utils.logger import Logger
 
 class ReportGenerator:
     def __init__(self):
-        self.metrics = MetricsDashboard()
         self.solicitudes = Solicitudes()
         self.certificados = Certificados()
+        self.metrics = MetricsDashboard()
         self.cache_manager = CacheManager()
         self._initialize_state()
 
@@ -27,22 +27,6 @@ class ReportGenerator:
             st.session_state.report_data = None
         if 'last_report_type' not in st.session_state:
             st.session_state.last_report_type = None
-
-    def _get_report_data(self, report_type: str, date_range: Tuple[datetime, datetime]) -> pd.DataFrame:
-        """Obtiene datos del reporte con caché"""
-        cache_key = f"report_{report_type}_{date_range[0]}_{date_range[1]}"
-        cached_value = self.cache_manager.get(cache_key)
-        if cached_value is not None:
-            return pd.DataFrame(cached_value)
-
-        if report_type == "Solicitudes":
-            data = self._get_requests_data(date_range)
-        elif report_type == "Certificados":
-            data = self._get_certificates_data(date_range)
-        else:
-            data = self._get_ai_performance_data(date_range)
-
-        return pd.DataFrame(data)
 
     def render(self) -> None:
         """Renderiza la interfaz del generador de reportes"""
@@ -73,31 +57,44 @@ class ReportGenerator:
             )
 
         with col2:
-            # Convertir datetime a date para el date_input
-            default_start = (datetime.now() - timedelta(days=30)).date()
-            default_end = datetime.now().date()
-
-            # No anotamos el tipo aquí porque st.date_input retorna su propio tipo
             dates = st.date_input(
                 "Rango de Fechas",
-                value=(default_start, default_end),
+                value=(
+                    datetime.now() - timedelta(days=30),
+                    datetime.now()
+                ),
                 help="Seleccione el período para el reporte"
             )
 
-            if st.button("Generar Reporte"):
-                try:
-                    # Validar y convertir las fechas
-                    if isinstance(dates, (list, tuple)) and len(dates) == 2:
-                        start_date = datetime.combine(dates[0], datetime.min.time())
-                        end_date = datetime.combine(dates[1], datetime.max.time())
-                        date_range = (start_date, end_date)
-                        self._generate_report(report_type, date_range)
-                    else:
-                        st.error("Por favor seleccione un rango de fechas válido")
+        if st.button("Generar Reporte"):
+            try:
+                # Validar y convertir las fechas
+                if isinstance(dates, (list, tuple)) and len(dates) == 2:
+                    start_date = datetime.combine(dates[0], datetime.min.time())
+                    end_date = datetime.combine(dates[1], datetime.max.time())
+                    date_range = (start_date, end_date)
+                    self._generate_report(report_type, date_range)
+                else:
+                    st.error("Por favor seleccione un rango de fechas válido")
 
-                except Exception as e:
-                    Logger.error(f"Error procesando fechas: {str(e)}")
-                    st.error("Error al procesar el rango de fechas")
+            except Exception as e:
+                Logger.error(f"Error procesando fechas: {str(e)}")
+                st.error("Error al procesar el rango de fechas")
+
+    def _get_report_data(self, report_type: str, date_range: Tuple[datetime, datetime]) -> pd.DataFrame:
+        """Obtiene datos del reporte"""
+        try:
+            if report_type == "Solicitudes":
+                data = self._get_requests_data(date_range)
+            elif report_type == "Certificados":
+                data = self._get_certificates_data(date_range)
+            else:
+                data = self._get_ai_performance_data(date_range)
+
+            return pd.DataFrame(data)
+        except Exception as e:
+            Logger.error(f"Error obteniendo datos del reporte: {str(e)}")
+            return pd.DataFrame()
 
     def _render_report_preview(self) -> None:
         """Renderiza vista previa del reporte"""

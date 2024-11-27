@@ -13,14 +13,14 @@ class Chat:
         self.service_factory = ServiceFactory()
         self._initialize_state()
 
-    def _initialize_state(self):
+    def _initialize_state(self) -> None:
         """Inicializa el estado del chat"""
         if 'chat_history' not in st.session_state:
             st.session_state.chat_history = []
         if 'current_provider' not in st.session_state:
             st.session_state.current_provider = "openai"
 
-    def render(self):
+    def render(self) -> None:
         """Renderiza la interfaz del chat"""
         try:
             st.title("Chat de Asistencia")
@@ -48,15 +48,20 @@ class Chat:
             Logger.error(f"Error en chat: {str(e)}")
             st.error("Error en el chat")
 
-    def _render_chat_history(self):
+    def _render_chat_history(self) -> None:
         """Renderiza el historial del chat"""
         for message in st.session_state.chat_history:
             with st.chat_message(message["role"]):
                 st.write(message["content"])
                 st.caption(f"via {message['provider']} - {message['timestamp']}")
 
-    def _handle_user_input(self, user_input: str):
-        """Maneja la entrada del usuario"""
+    def _handle_user_input(self, user_input: str) -> None:
+        """
+        Maneja la entrada del usuario.
+
+        Args:
+            user_input: El mensaje del usuario
+        """
         try:
             # Agregar mensaje del usuario al historial
             self._add_message("user", user_input)
@@ -71,8 +76,14 @@ class Chat:
             Logger.error(f"Error procesando mensaje: {str(e)}")
             st.error("Error procesando tu mensaje")
 
-    def _add_message(self, role: str, content: str):
-        """Agrega un mensaje al historial"""
+    def _add_message(self, role: str, content: str) -> None:
+        """
+        Agrega un mensaje al historial.
+
+        Args:
+            role: El rol del mensaje (user/assistant)
+            content: El contenido del mensaje
+        """
         st.session_state.chat_history.append({
             "role": role,
             "content": content,
@@ -82,7 +93,15 @@ class Chat:
 
     @cached(ttl=60)
     def _get_ai_response(self, message: str) -> str:
-        """Obtiene respuesta del modelo con caché"""
+        """
+        Obtiene respuesta del modelo con caché.
+
+        Args:
+            message: El mensaje del usuario
+
+        Returns:
+            La respuesta del modelo
+        """
         try:
             service = self.service_factory.get_service(st.session_state.current_provider)
             return service.get_completion(message)
