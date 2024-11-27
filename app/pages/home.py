@@ -94,12 +94,17 @@ class HomePage:
             # Selector de vista y rango de fechas
             col1, col2 = st.columns([1, 2])
             with col1:
-                st.session_state.home_view = st.radio(
+                view_options = ["General", "Detallada"]
+                current_view = st.session_state.get('home_view', "General")
+                selected_view = st.radio(
                     "Vista",
-                    options=["General", "Detallada"],
+                    options=view_options,
+                    index=view_options.index(current_view),
                     horizontal=True,
                     key="home_view_radio"
                 )
+                st.session_state.home_view = selected_view
+
             with col2:
                 st.session_state.date_range = st.date_input(
                     "Rango de fechas",
