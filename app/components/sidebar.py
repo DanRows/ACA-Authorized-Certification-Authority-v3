@@ -26,11 +26,16 @@ class Sidebar:
                 st.markdown("""
                     <style>
                         header[data-testid="stHeader"] {display: none;}
+                        div.block-container {padding-top: 0;}
+                        div.stButton > button {
+                            width: 100%;
+                            margin-bottom: 8px;
+                        }
                     </style>
                 """, unsafe_allow_html=True)
 
                 if not st.session_state.authenticated:
-                    # Solo mostrar el formulario de login
+                    # Solo mostrar el formulario de login sin navegación
                     self.auth.login_form()
                 else:
                     # Menú de navegación
