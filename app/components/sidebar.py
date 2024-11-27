@@ -31,8 +31,11 @@ class Sidebar:
                             width: 100%;
                             margin-bottom: 8px;
                         }
-                        div[data-testid="stRadio"] {display: none;}
-                        .st-emotion-cache-16txtl3 {padding-top: 1rem;}
+                        div[data-testid="stSidebarNav"] {display: none !important;}
+                        ul[data-testid="stSidebarNavItems"] {display: none !important;}
+                        div[data-testid="stSidebarNavSeparator"] {display: none !important;}
+                        .st-emotion-cache-bjn8wh {display: none !important;}
+                        .st-emotion-cache-1ekxtbt {display: none !important;}
                         section[data-testid="stSidebar"] > div {
                             padding-top: 0;
                         }
