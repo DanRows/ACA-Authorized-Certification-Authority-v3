@@ -1,25 +1,32 @@
 import os
+import sys
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import streamlit as st
 
-# Importaciones relativas
-from .config.configuration import Configuration
-from .utils.logger import Logger
+# Asegurar que el directorio raíz esté en el PYTHONPATH
+project_dir = Path(__file__).parent.parent.absolute()
+if str(project_dir) not in sys.path:
+    sys.path.insert(0, str(project_dir))
+
+# Importaciones del proyecto
+from app.config.configuration import Configuration
+from app.utils.logger import Logger
 
 
 class ACMADashboard:
     def __init__(self):
         # Importaciones locales dentro del __init__
-        from .components.auth import Auth
-        from .components.certificados import Certificados
-        from .components.chat import Chat
-        from .components.metrics_dashboard import MetricsDashboard
-        from .components.notifications import Notifications
-        from .components.report_generator import ReportGenerator
-        from .components.sidebar import Sidebar
-        from .components.solicitudes import Solicitudes
+        from app.components.auth import Auth
+        from app.components.certificados import Certificados
+        from app.components.chat import Chat
+        from app.components.metrics_dashboard import MetricsDashboard
+        from app.components.notifications import Notifications
+        from app.components.report_generator import ReportGenerator
+        from app.components.sidebar import Sidebar
+        from app.components.solicitudes import Solicitudes
 
         self.config = Configuration()
         self.auth = Auth()
