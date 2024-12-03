@@ -7,6 +7,61 @@ from app.utils.logger import Logger
 class Solicitudes:
     def __init__(self):
         self._requests: List[Dict] = []
+        self._initialize_sample_data()
+
+    def _initialize_sample_data(self) -> None:
+        """Inicializa datos de ejemplo"""
+        if not self._requests:
+            self._requests = [
+                {
+                    'id': 'REQ001',
+                    'client': 'Laboratorio Central',
+                    'contact': 'Juan Pérez',
+                    'email': 'jperez@lab.com',
+                    'phone': '555-0101',
+                    'service_type': 'Calibración de Balanzas',
+                    'urgency': 'Normal',
+                    'location': 'Laboratorio PROCyMI',
+                    'equipment': {
+                        'type': 'Balanza Analítica',
+                        'brand': 'Mettler Toledo',
+                        'model': 'XA 220/X',
+                        'serial': 'BAL-001'
+                    },
+                    'requirements': {
+                        'needs_adjustment': True,
+                        'needs_maintenance': False,
+                        'iso_required': True,
+                        'express_service': False
+                    },
+                    'status': 'pending',
+                    'created_at': datetime.now()
+                },
+                {
+                    'id': 'REQ002',
+                    'client': 'Hospital Regional',
+                    'contact': 'María García',
+                    'email': 'mgarcia@hospital.com',
+                    'phone': '555-0202',
+                    'service_type': 'Calibración de Termómetros',
+                    'urgency': 'Urgente',
+                    'location': 'Instalaciones del Cliente',
+                    'equipment': {
+                        'type': 'Termómetro Digital',
+                        'brand': 'Fluke',
+                        'model': 'DT-01',
+                        'serial': 'TERM-001'
+                    },
+                    'requirements': {
+                        'needs_adjustment': False,
+                        'needs_maintenance': True,
+                        'iso_required': True,
+                        'express_service': True
+                    },
+                    'status': 'in_progress',
+                    'created_at': datetime.now()
+                }
+            ]
 
     def get_total(self) -> int:
         """
@@ -17,19 +72,23 @@ class Solicitudes:
         """
         return len(self._requests)
 
-    def get_requests(self) -> List[Dict]:
+    def get_requests(self, limit: Optional[int] = None) -> List[Dict]:
         """
-        Obtiene todas las solicitudes.
+        Obtiene la lista de solicitudes.
+
+        Args:
+            limit: Límite opcional de solicitudes a retornar
 
         Returns:
-            List[Dict]: Lista de solicitudes ordenadas por fecha
+            List[Dict]: Lista de solicitudes
         """
         try:
-            return sorted(
+            requests = sorted(
                 self._requests,
                 key=lambda x: x['created_at'],
                 reverse=True
             )
+            return requests[:limit] if limit else requests
         except Exception as e:
             Logger.error(f"Error obteniendo solicitudes: {str(e)}")
             return []
@@ -63,12 +122,12 @@ class Solicitudes:
             Optional[Dict]: Solicitud encontrada o None si no existe
         """
         try:
-            return next(
-                (req for req in self._requests if req['id'] == request_id),
-                None
-            )
+            for request in self._requests:
+                if request['id'] == request_id:
+                    return request
+            return None
         except Exception as e:
-            Logger.error(f"Error al buscar solicitud {request_id}: {str(e)}")
+            Logger.error(f"Error buscando solicitud {request_id}: {str(e)}")
             return None
 
     def update_request(self, request_id: str, updates: Dict) -> bool:
@@ -117,23 +176,6 @@ class Solicitudes:
             Logger.error(f"Error eliminando solicitud {request_id}: {str(e)}")
             return False
 
-    def get_provider_stats(self) -> Dict[str, int]:
-        """
-        Obtiene estadísticas por proveedor.
-
-        Returns:
-            Dict[str, int]: Diccionario con conteo por proveedor
-        """
-        try:
-            stats = {}
-            for request in self._requests:
-                provider = request.get('provider', 'unknown')
-                stats[provider] = stats.get(provider, 0) + 1
-            return stats
-        except Exception as e:
-            Logger.error(f"Error obteniendo estadísticas de proveedores: {str(e)}")
-            return {}
-
     def get_status_stats(self) -> Dict[str, int]:
         """
         Obtiene estadísticas por estado.
@@ -149,4 +191,38 @@ class Solicitudes:
             return stats
         except Exception as e:
             Logger.error(f"Error obteniendo estadísticas de estados: {str(e)}")
+            return {}
+
+    def get_urgency_stats(self) -> Dict[str, int]:
+        """
+        Obtiene estadísticas por urgencia.
+
+        Returns:
+            Dict[str, int]: Diccionario con conteo por nivel de urgencia
+        """
+        try:
+            stats = {}
+            for request in self._requests:
+                urgency = request.get('urgency', 'unknown')
+                stats[urgency] = stats.get(urgency, 0) + 1
+            return stats
+        except Exception as e:
+            Logger.error(f"Error obteniendo estadísticas de urgencia: {str(e)}")
+            return {}
+
+    def get_service_type_stats(self) -> Dict[str, int]:
+        """
+        Obtiene estadísticas por tipo de servicio.
+
+        Returns:
+            Dict[str, int]: Diccionario con conteo por tipo de servicio
+        """
+        try:
+            stats = {}
+            for request in self._requests:
+                service_type = request.get('service_type', 'unknown')
+                stats[service_type] = stats.get(service_type, 0) + 1
+            return stats
+        except Exception as e:
+            Logger.error(f"Error obteniendo estadísticas de servicios: {str(e)}")
             return {}

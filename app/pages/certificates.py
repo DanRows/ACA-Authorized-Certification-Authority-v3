@@ -191,8 +191,12 @@ class CertificatesPage:
             observations = st.text_area("Observaciones")
 
             if st.form_submit_button("Generar Certificado"):
+                # Convertir fechas de date a datetime
+                cal_date = datetime.combine(calibration_date, datetime.min.time())
+                next_cal = datetime.combine(next_calibration, datetime.min.time())
+
                 self._create_certificate(
-                    client, eq_type, calibration_date, next_calibration,
+                    client, eq_type, cal_date, next_cal,
                     {
                         'contact': contact,
                         'email': email,
@@ -296,12 +300,16 @@ class CertificatesPage:
                           details: Dict) -> None:
         """Crea un nuevo certificado"""
         try:
+            # Convertir dates a datetime
+            cal_date = datetime.combine(calibration_date, datetime.min.time())
+            next_cal = datetime.combine(next_calibration, datetime.min.time())
+
             certificate = {
                 'id': f'CERT{len(self.certificados.get_certificates()) + 1:04d}',
                 'client': client,
                 'type': eq_type,
-                'calibration_date': calibration_date,
-                'next_calibration': next_calibration,
+                'calibration_date': cal_date,
+                'next_calibration': next_cal,
                 'status': 'active',
                 'created_at': datetime.now(),
                 'details': details
@@ -313,7 +321,7 @@ class CertificatesPage:
             st.error(f"❌ Error al generar certificado: {str(e)}")
 
     def _apply_filters(self, certificates: List[Dict], search: str,
-                      status_filter: List[str], date_range: List[datetime]) -> List[Dict]:
+                      status_filter: List[str], date_range) -> List[Dict]:
         """Aplica filtros a la lista de certificados"""
         filtered = certificates
 
@@ -332,9 +340,11 @@ class CertificatesPage:
             ]
 
         if date_range and len(date_range) == 2:
+            start_date = datetime.combine(date_range[0], datetime.min.time())
+            end_date = datetime.combine(date_range[1], datetime.max.time())
             filtered = [
                 c for c in filtered
-                if date_range[0] <= c.get('calibration_date', datetime.now()) <= date_range[1]
+                if start_date <= c.get('calibration_date', datetime.now()) <= end_date
             ]
 
         return filtered
@@ -370,6 +380,88 @@ class CertificatesPage:
             st.rerun()
         except Exception as e:
             st.error(f"Error al revocar certificado: {str(e)}")
+
+    def _render_equipment_distribution(self, df: pd.DataFrame) -> None:
+        """Renderiza distribución de equipos"""
+        try:
+            st.subheader("Distribución por Tipo de Equipo")
+            type_counts = df['type'].value_counts()
+            fig = px.pie(
+                values=type_counts.values,
+                names=type_counts.index,
+                title="Tipos de Equipo"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        except Exception as e:
+            Logger.error(f"Error en distribución de equipos: {str(e)}")
+            st.error("Error mostrando distribución")
+
+    def _render_calibration_timeline(self, df: pd.DataFrame) -> None:
+        """Renderiza línea de tiempo de calibraciones"""
+        try:
+            st.subheader("Línea de Tiempo")
+            df['month'] = pd.to_datetime(df['calibration_date']).dt.strftime('%Y-%m')
+            monthly = df.groupby('month').size().reset_index(name='count')
+            fig = px.line(
+                monthly,
+                x='month',
+                y='count',
+                title="Calibraciones por Mes"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        except Exception as e:
+            Logger.error(f"Error en línea de tiempo: {str(e)}")
+            st.error("Error mostrando línea de tiempo")
+
+    def _search_certificates(self, client: str, equipment_type: List[str],
+                           status: List[str], date_range: List[datetime],
+                           location: List[str]) -> List[Dict]:
+        """Realiza búsqueda avanzada de certificados"""
+        certificates = self.certificados.get_certificates()
+        filtered = certificates
+
+        if client:
+            filtered = [
+                c for c in filtered
+                if client.lower() in c.get('client', '').lower()
+            ]
+
+        if equipment_type:
+            filtered = [
+                c for c in filtered
+                if c.get('type') in equipment_type
+            ]
+
+        if status:
+            filtered = [
+                c for c in filtered
+                if c.get('status') in status
+            ]
+
+        if location:
+            filtered = [
+                c for c in filtered
+                if c.get('details', {}).get('location') in location
+            ]
+
+        if date_range and len(date_range) == 2:
+            start_date = datetime.combine(date_range[0], datetime.min.time())
+            end_date = datetime.combine(date_range[1], datetime.max.time())
+            filtered = [
+                c for c in filtered
+                if start_date <= c.get('calibration_date', datetime.now()) <= end_date
+            ]
+
+        return filtered
+
+    def _display_search_results(self, results: List[Dict]) -> None:
+        """Muestra resultados de búsqueda"""
+        for cert in results:
+            with st.expander(
+                f"📄 {cert['id']} - {cert.get('client', 'N/A')}",
+                expanded=False
+            ):
+                self._render_certificate_details(cert)
 
 
 def render_certificates_page():
