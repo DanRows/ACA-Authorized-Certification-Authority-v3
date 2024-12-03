@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from app.utils.logger import Logger
@@ -25,8 +25,9 @@ class Solicitudes:
                     'equipment': {
                         'type': 'Balanza Analítica',
                         'brand': 'Mettler Toledo',
-                        'model': 'XA 220/X',
-                        'serial': 'BAL-001'
+                        'model': 'XPE205',
+                        'serial': 'B123456789',
+                        'last_calibration': datetime.now() - timedelta(days=365)
                     },
                     'requirements': {
                         'needs_adjustment': True,
@@ -35,7 +36,8 @@ class Solicitudes:
                         'express_service': False
                     },
                     'status': 'pending',
-                    'created_at': datetime.now()
+                    'created_at': datetime.now() - timedelta(days=2),
+                    'desired_date': datetime.now() + timedelta(days=5)
                 },
                 {
                     'id': 'REQ002',
@@ -49,8 +51,9 @@ class Solicitudes:
                     'equipment': {
                         'type': 'Termómetro Digital',
                         'brand': 'Fluke',
-                        'model': 'DT-01',
-                        'serial': 'TERM-001'
+                        'model': '1523',
+                        'serial': 'T987654321',
+                        'last_calibration': datetime.now() - timedelta(days=180)
                     },
                     'requirements': {
                         'needs_adjustment': False,
@@ -59,7 +62,91 @@ class Solicitudes:
                         'express_service': True
                     },
                     'status': 'in_progress',
-                    'created_at': datetime.now()
+                    'created_at': datetime.now() - timedelta(days=1),
+                    'started_at': datetime.now() - timedelta(hours=4),
+                    'desired_date': datetime.now() + timedelta(days=2)
+                },
+                {
+                    'id': 'REQ003',
+                    'client': 'Industria Farmacéutica',
+                    'contact': 'Carlos López',
+                    'email': 'clopez@farma.com',
+                    'phone': '555-0303',
+                    'service_type': 'Calibración de Material Volumétrico',
+                    'urgency': 'Normal',
+                    'location': 'Laboratorio PROCyMI',
+                    'equipment': {
+                        'type': 'Material Volumétrico',
+                        'brand': 'Brand',
+                        'model': 'Volumetric Flask',
+                        'serial': 'V456789123',
+                        'last_calibration': None
+                    },
+                    'requirements': {
+                        'needs_adjustment': False,
+                        'needs_maintenance': False,
+                        'iso_required': True,
+                        'express_service': False
+                    },
+                    'status': 'completed',
+                    'created_at': datetime.now() - timedelta(days=10),
+                    'completed_at': datetime.now() - timedelta(days=8),
+                    'desired_date': datetime.now() - timedelta(days=7)
+                },
+                {
+                    'id': 'REQ004',
+                    'client': 'Universidad Nacional',
+                    'contact': 'Ana Martínez',
+                    'email': 'amartinez@uni.edu',
+                    'phone': '555-0404',
+                    'service_type': 'Calibración de Balanzas',
+                    'urgency': 'Normal',
+                    'location': 'Laboratorio PROCyMI',
+                    'equipment': {
+                        'type': 'Balanza de Precisión',
+                        'brand': 'Sartorius',
+                        'model': 'Quintix224-1S',
+                        'serial': 'B789123456',
+                        'last_calibration': datetime.now() - timedelta(days=400)
+                    },
+                    'requirements': {
+                        'needs_adjustment': True,
+                        'needs_maintenance': True,
+                        'iso_required': False,
+                        'express_service': False
+                    },
+                    'status': 'approved',
+                    'created_at': datetime.now() - timedelta(hours=12),
+                    'approved_at': datetime.now() - timedelta(hours=6),
+                    'desired_date': datetime.now() + timedelta(days=10)
+                },
+                {
+                    'id': 'REQ005',
+                    'client': 'Laboratorio Clínico',
+                    'contact': 'Roberto Sánchez',
+                    'email': 'rsanchez@lab.com',
+                    'phone': '555-0505',
+                    'service_type': 'Calibración de Higrómetros',
+                    'urgency': 'Urgente',
+                    'location': 'Instalaciones del Cliente',
+                    'equipment': {
+                        'type': 'Higrómetro',
+                        'brand': 'Testo',
+                        'model': '608-H1',
+                        'serial': 'H321654987',
+                        'last_calibration': datetime.now() - timedelta(days=300)
+                    },
+                    'requirements': {
+                        'needs_adjustment': False,
+                        'needs_maintenance': False,
+                        'iso_required': True,
+                        'express_service': True
+                    },
+                    'status': 'rejected',
+                    'created_at': datetime.now() - timedelta(days=5),
+                    'rejected_at': datetime.now() - timedelta(days=4),
+                    'rejection_reason': 'Equipo no cumple requisitos mínimos',
+                    'desired_date': datetime.now() + timedelta(days=3)
                 }
             ]
 
