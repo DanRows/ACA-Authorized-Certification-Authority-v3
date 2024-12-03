@@ -4,8 +4,10 @@ from typing import Dict, List
 import plotly.graph_objects as go  # type: ignore
 import streamlit as st  # type: ignore
 
+from app.components.analytics_dashboard import AnalyticsDashboard
 from app.components.certificados import Certificados
 from app.components.solicitudes import Solicitudes
+from app.utils.db import DatabaseManager
 from app.utils.logger import Logger
 
 
@@ -67,24 +69,18 @@ class DashboardWidgets:
     def show_metrics_card(self) -> None:
         """Muestra tarjeta de métricas principales"""
         try:
-            # Asegurarse de que haya datos
-            if len(self.solicitudes.get_requests()) == 0:
-                self._add_sample_data()
+            with DatabaseManager().get_db() as db:
+                analytics = AnalyticsDashboard(db)
 
-            col1, col2, col3 = st.columns(3)
+                # Métricas de clientes
+                analytics.render_client_metrics()
 
-            with col1:
-                total_requests = len(self.solicitudes.get_requests())
-                st.metric("Total Solicitudes", total_requests)
+                # Métricas de equipos
+                analytics.render_equipment_metrics()
 
-            with col2:
-                pending_requests = len([r for r in self.solicitudes.get_requests()
-                                    if r['status'] == 'pending'])
-                st.metric("Solicitudes Pendientes", pending_requests)
+                # Métricas originales
+                self._render_original_metrics()
 
-            with col3:
-                success_rate = self._calculate_success_rate()
-                st.metric("Tasa de Éxito", f"{success_rate}%")
         except Exception as e:
             Logger.error(f"Error mostrando métricas: {str(e)}")
             st.error("Error al mostrar métricas")
@@ -154,5 +150,26 @@ class DashboardWidgets:
         except Exception as e:
             Logger.error(f"Error calculando tasa de éxito: {str(e)}")
             return 0.0
+
+    def _render_original_metrics(self) -> None:
+        """Renderiza las métricas originales"""
+        try:
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                total_requests = len(self.solicitudes.get_requests())
+                st.metric("Total Solicitudes", total_requests)
+
+            with col2:
+                pending_requests = len([r for r in self.solicitudes.get_requests()
+                                    if r['status'] == 'pending'])
+                st.metric("Solicitudes Pendientes", pending_requests)
+
+            with col3:
+                success_rate = self._calculate_success_rate()
+                st.metric("Tasa de Éxito", f"{success_rate}%")
+        except Exception as e:
+            Logger.error(f"Error mostrando métricas originales: {str(e)}")
+            st.error("Error al mostrar métricas originales")
 
     # ... resto del código ...

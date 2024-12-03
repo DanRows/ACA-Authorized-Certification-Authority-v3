@@ -20,10 +20,10 @@ class Sidebar:
         if 'authenticated' not in st.session_state:
             st.session_state.authenticated = False
 
-    def _get_base64_logo(self) -> str:
+    def _get_logo_base64(self) -> str:
         """Obtiene el logo en formato base64"""
         try:
-            logo_path = Path(__file__).parent.parent.parent / "assets" / "procymi_logo.png"
+            logo_path = Path(__file__).parent.parent / "static" / "images" / "procymi_logo.png"
             with open(logo_path, "rb") as f:
                 data = f.read()
             return base64.b64encode(data).decode()
@@ -36,7 +36,7 @@ class Sidebar:
         try:
             with st.sidebar:
                 # Ocultar elementos no deseados y estilizar
-                logo_base64 = self._get_base64_logo()
+                logo_base64 = self._get_logo_base64()
                 st.markdown(f"""
                     <style>
                         header[data-testid="stHeader"] {{display: none;}}
@@ -66,7 +66,7 @@ class Sidebar:
                             margin-bottom: 2rem;
                         }}
                         .logo-container img {{
-                            max-width: 200px;
+                            max-width: 150px;
                             height: auto;
                         }}
                     </style>

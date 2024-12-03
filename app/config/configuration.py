@@ -6,7 +6,11 @@ from app.utils.logger import Logger
 class Configuration:
     def __init__(self):
         self.settings: Dict[str, Any] = {
-            "database_url": "postgresql://user:password@localhost/acma_db",
+            "database": {
+                "postgresql": "postgresql://user:password@localhost/acma_db",
+                "sqlite": "sqlite:///acma.db",
+                "active": "sqlite"  # o "postgresql"
+            },
             "ai_providers": {
                 "openai": {
                     "api_key": "",
