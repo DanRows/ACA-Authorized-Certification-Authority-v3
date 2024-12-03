@@ -276,4 +276,29 @@ class DashboardWidgets:
             Logger.error(f"Error mostrando métricas originales: {str(e)}")
             st.error("Error al mostrar métricas originales")
 
+    def render(self) -> None:
+        """Renderiza el dashboard"""
+        try:
+            # Agregar espacio superior
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # Métricas principales
+            self.show_metrics_card()
+
+            # Agregar espacio entre secciones
+            st.markdown("<br><br>", unsafe_allow_html=True)
+
+            # Historial de Calibraciones
+            self.show_requests_timeline()
+
+            # Agregar espacio entre secciones
+            st.markdown("<br><br>", unsafe_allow_html=True)
+
+            # Análisis de Servicios
+            self.show_provider_stats()
+
+        except Exception as e:
+            Logger.error(f"Error en dashboard: {str(e)}")
+            st.error("Error cargando el dashboard")
+
     # ... resto del código ...

@@ -23,14 +23,24 @@ class Sidebar:
     def _get_logo_base64(self) -> str:
         """Obtiene el logo en formato base64"""
         try:
-            logo_path = Path(__file__).parent.parent / "static" / "images" / "procymi_logo.png"
+            # Obtener la ruta absoluta del logo
+            logo_path = Path(__file__).parent.parent.absolute() / "static" / "images" / "procymi_logo.png"
+
+            # Depurar la ruta
+            Logger.info(f"Buscando logo en: {logo_path}")
+            Logger.info(f"¿La ruta existe?: {logo_path.exists()}")
+
             if not logo_path.exists():
                 Logger.warning(f"Logo no encontrado en: {logo_path}")
                 return ""
 
+            # Leer y codificar el logo
             with open(logo_path, "rb") as f:
                 data = f.read()
-            return base64.b64encode(data).decode()
+                encoded = base64.b64encode(data).decode()
+                Logger.info("Logo cargado y codificado exitosamente")
+                return encoded
+
         except Exception as e:
             Logger.error(f"Error cargando logo: {str(e)}")
             return ""
@@ -66,25 +76,35 @@ class Sidebar:
                         .logo-container {
                             display: flex;
                             justify-content: center;
-                            padding: 1rem 0;
+                            padding: 2rem 0;
                             background-color: #ffffff;
-                            margin-bottom: 2rem;
+                            margin: 1rem 0 3rem 0;
                         }
                         .logo-container img {
                             max-width: 150px;
                             height: auto;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                            border-radius: 8px;
+                            padding: 10px;
                         }
                     </style>
                 """
                 st.markdown(style_html, unsafe_allow_html=True)
 
-                # Solo mostrar el logo si existe
+                # Cargar y mostrar el logo
                 if logo_base64:
-                    st.markdown(f"""
+                    st.markdown(
+                        f"""
                         <div class="logo-container">
-                            <img src="data:image/png;base64,{logo_base64}" alt="PROCyMI Logo"/>
+                            <img src="data:image/png;base64,{logo_base64}"
+                                 alt="PROCyMI Logo"
+                                 style="max-width: 150px; height: auto;"/>
                         </div>
-                    """, unsafe_allow_html=True)
+                        """,
+                        unsafe_allow_html=True
+                    )
+                else:
+                    Logger.warning("No se pudo cargar el logo")
 
                 if not st.session_state.authenticated:
                     # Solo mostrar el formulario de login sin navegación
