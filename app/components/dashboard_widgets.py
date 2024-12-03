@@ -69,75 +69,179 @@ class DashboardWidgets:
     def show_metrics_card(self) -> None:
         """Muestra tarjeta de métricas principales"""
         try:
-            with DatabaseManager().get_db() as db:
-                analytics = AnalyticsDashboard(db)
+            col1, col2, col3, col4 = st.columns(4)
 
-                # Métricas de clientes
-                analytics.render_client_metrics()
+            with col1:
+                total_equipment = len(self.certificados.get_certificates())
+                st.metric(
+                    "Equipos Calibrados",
+                    total_equipment,
+                    help="Total de equipos calibrados"
+                )
 
-                # Métricas de equipos
-                analytics.render_equipment_metrics()
+            with col2:
+                pending_calibrations = len([
+                    c for c in self.certificados.get_certificates()
+                    if c['status'] == 'pending'
+                ])
+                st.metric(
+                    "Calibraciones Pendientes",
+                    pending_calibrations,
+                    help="Calibraciones en proceso"
+                )
 
-                # Métricas originales
-                self._render_original_metrics()
+            with col3:
+                success_rate = self._calculate_success_rate()
+                st.metric(
+                    "Satisfacción Cliente",
+                    f"{success_rate}%",
+                    help="Índice de satisfacción del cliente"
+                )
+
+            with col4:
+                # Calcular equipos que necesitan recalibración pronto
+                due_soon = len([
+                    c for c in self.certificados.get_certificates()
+                    if c.get('next_calibration') and
+                    (c['next_calibration'] - datetime.now()).days < 30
+                ])
+                st.metric(
+                    "Próximas Calibraciones",
+                    due_soon,
+                    help="Equipos que requieren calibración en los próximos 30 días"
+                )
 
         except Exception as e:
             Logger.error(f"Error mostrando métricas: {str(e)}")
             st.error("Error al mostrar métricas")
 
     def show_requests_timeline(self) -> None:
-        """Muestra línea de tiempo de solicitudes"""
+        """Muestra línea de tiempo de calibraciones"""
         try:
-            st.subheader("Línea de Tiempo de Solicitudes")
-            requests = self.solicitudes.get_requests()
+            st.subheader("Historial de Calibraciones")
 
-            if not requests:
-                st.info("No hay solicitudes para mostrar")
-                return
+            # Crear dos columnas
+            col1, col2 = st.columns(2)
 
-            dates = [r.get('created_at', datetime.now()) for r in requests]
+            with col1:
+                # Gráfico de calibraciones por mes
+                certificates = self.certificados.get_certificates()
+                if not certificates:
+                    st.info("No hay datos de calibraciones para mostrar")
+                    return
 
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=dates,
-                y=range(len(dates)),
-                mode='lines+markers',
-                name='Solicitudes'
-            ))
-            st.plotly_chart(fig)
+                # Agrupar por mes
+                monthly_data = {}
+                for cert in certificates:
+                    month = cert['created_at'].strftime('%Y-%m')
+                    monthly_data[month] = monthly_data.get(month, 0) + 1
+
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=list(monthly_data.keys()),
+                    y=list(monthly_data.values()),
+                    name='Calibraciones por Mes'
+                ))
+                fig.update_layout(
+                    title="Calibraciones Mensuales",
+                    xaxis_title="Mes",
+                    yaxis_title="Cantidad",
+                    height=300
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            with col2:
+                # Gráfico de tipos de equipos calibrados
+                equipment_types = {}
+                for cert in certificates:
+                    eq_type = cert.get('details', {}).get('type', 'Otros')
+                    equipment_types[eq_type] = equipment_types.get(eq_type, 0) + 1
+
+                fig = go.Figure(data=[
+                    go.Pie(
+                        labels=list(equipment_types.keys()),
+                        values=list(equipment_types.values()),
+                        hole=.3
+                    )
+                ])
+                fig.update_layout(
+                    title="Tipos de Equipos Calibrados",
+                    height=300
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
         except Exception as e:
             Logger.error(f"Error mostrando línea de tiempo: {str(e)}")
-            st.error("Error al mostrar línea de tiempo")
+            st.error("Error al mostrar historial de calibraciones")
 
     def show_provider_stats(self) -> None:
-        """Muestra estadísticas por proveedor"""
+        """Muestra estadísticas de servicios metrológicos"""
         try:
-            st.subheader("Estadísticas por Proveedor")
-            providers = self.solicitudes.get_provider_stats()
+            st.subheader("Análisis de Servicios")
 
-            if not providers:
-                st.info("No hay datos de proveedores para mostrar")
-                return
+            # Crear dos columnas
+            col1, col2 = st.columns(2)
 
-            fig = go.Figure(data=[
-                go.Bar(
-                    name='Solicitudes',
-                    x=list(providers.keys()),
-                    y=list(providers.values())
+            with col1:
+                # Estado de calibraciones
+                status_counts = {}
+                for cert in self.certificados.get_certificates():
+                    status = cert.get('status', 'unknown')
+                    status_counts[status] = status_counts.get(status, 0) + 1
+
+                fig = go.Figure(data=[
+                    go.Bar(
+                        name='Estado de Calibraciones',
+                        x=list(status_counts.keys()),
+                        y=list(status_counts.values()),
+                        text=list(status_counts.values()),
+                        textposition='auto'
+                    )
+                ])
+                fig.update_layout(
+                    title="Estado de Calibraciones",
+                    xaxis_title="Estado",
+                    yaxis_title="Cantidad",
+                    height=300
                 )
-            ])
+                st.plotly_chart(fig, use_container_width=True)
 
-            fig.update_layout(
-                title="Solicitudes por Proveedor",
-                xaxis_title="Proveedor",
-                yaxis_title="Cantidad",
-                showlegend=True
-            )
+            with col2:
+                # Tiempo promedio de calibración por tipo de equipo
+                equipment_times = {}
+                for cert in self.certificados.get_certificates():
+                    if cert.get('created_at') and cert.get('details', {}).get('completion_date'):
+                        eq_type = cert.get('details', {}).get('type', 'Otros')
+                        time_diff = (cert['details']['completion_date'] - cert['created_at']).days
+                        if eq_type not in equipment_times:
+                            equipment_times[eq_type] = []
+                        equipment_times[eq_type].append(time_diff)
 
-            st.plotly_chart(fig)
+                avg_times = {
+                    k: sum(v)/len(v)
+                    for k, v in equipment_times.items()
+                }
+
+                fig = go.Figure(data=[
+                    go.Bar(
+                        name='Tiempo Promedio',
+                        x=list(avg_times.keys()),
+                        y=list(avg_times.values()),
+                        text=[f"{v:.1f} días" for v in avg_times.values()],
+                        textposition='auto'
+                    )
+                ])
+                fig.update_layout(
+                    title="Tiempo Promedio de Calibración por Tipo",
+                    xaxis_title="Tipo de Equipo",
+                    yaxis_title="Días",
+                    height=300
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
         except Exception as e:
             Logger.error(f"Error mostrando estadísticas: {str(e)}")
-            st.error("Error al mostrar estadísticas")
+            st.error("Error al mostrar análisis de servicios")
 
     def _calculate_success_rate(self) -> float:
         """Calcula la tasa de éxito de las solicitudes"""

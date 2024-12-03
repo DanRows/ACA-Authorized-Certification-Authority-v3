@@ -62,6 +62,18 @@ class Sidebar:
                             padding: 0.5rem 1rem;
                             width: 100%;
                         }
+                        /* Estilos del logo */
+                        .logo-container {
+                            display: flex;
+                            justify-content: center;
+                            padding: 1rem 0;
+                            background-color: #ffffff;
+                            margin-bottom: 2rem;
+                        }
+                        .logo-container img {
+                            max-width: 150px;
+                            height: auto;
+                        }
                     </style>
                 """
                 st.markdown(style_html, unsafe_allow_html=True)
