@@ -18,26 +18,12 @@ from app.utils.logger import Logger
 
 class ACMADashboard:
     def __init__(self):
-        # Importaciones locales dentro del __init__
-        from app.components.auth import Auth
-        from app.components.certificados import Certificados
-        from app.components.chat import Chat
+        # Importaciones locales para evitar ciclos
+        from app.components.dashboard_widgets import DashboardWidgets
         from app.components.metrics_dashboard import MetricsDashboard
-        from app.components.notifications import Notifications
-        from app.components.report_generator import ReportGenerator
-        from app.components.sidebar import Sidebar
-        from app.components.solicitudes import Solicitudes
 
-        self.config = Configuration()
-        self.auth = Auth()
-        self.sidebar = Sidebar()
-        self.certificados = Certificados()
-        self.solicitudes = Solicitudes()
-        self.chat = Chat()
-        self.notifications = Notifications()
-        self.metrics_dashboard = MetricsDashboard()
-        self.report_generator = ReportGenerator()
-        self.setup_session_state()
+        self.dashboard = DashboardWidgets(self.solicitudes, self.certificados)
+        self.metrics = MetricsDashboard()
 
     def setup_session_state(self) -> None:
         """Inicializa el estado de la sesión"""
@@ -65,7 +51,7 @@ class ACMADashboard:
 
             # Renderizar la página correspondiente
             if current_page == "home":
-                self.metrics_dashboard.render()
+                self.metrics.render()
             elif current_page == "certificates":
                 self.certificados_page()
             elif current_page == "requests":

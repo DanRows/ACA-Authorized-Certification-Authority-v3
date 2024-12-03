@@ -3,7 +3,6 @@ from typing import Dict, List, Optional
 
 import streamlit as st
 
-from app.components.notifications import Notifications
 from app.config.configuration import Configuration
 from app.config.secrets_manager import SecretsManager
 from app.utils.cache import cached
@@ -12,6 +11,9 @@ from app.utils.logger import Logger
 
 class SettingsPage:
     def __init__(self):
+        # Importaciones locales para evitar ciclos
+        from app.components.notifications import Notifications
+
         self.config = Configuration()
         self.secrets = SecretsManager()
         self.notifications = Notifications()
