@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Dict, List
 
+import pandas as pd
 import plotly.graph_objects as go  # type: ignore
 import streamlit as st  # type: ignore
 
@@ -24,9 +25,6 @@ class DashboardWidgets:
             try:
                 self.solicitudes = solicitudes
                 self.certificados = certificados
-                # Importación local para evitar ciclos
-                from app.components.analytics_dashboard import AnalyticsDashboard
-                self.analytics = AnalyticsDashboard(solicitudes, certificados)
                 # Agregar datos de ejemplo solo una vez
                 if len(self.solicitudes.get_requests()) == 0:
                     self._add_sample_data()
@@ -609,5 +607,80 @@ class DashboardWidgets:
                         st.divider()
             else:
                 st.info("No hay calibraciones registradas")
+
+    def _show_filtered_timeline(self, tipo_filtro: List[str], cliente_filtro: str, estado_filtro: List[str]) -> None:
+        """Muestra la línea de tiempo filtrada"""
+        try:
+            certificates = self.certificados.get_certificates()
+
+            # Aplicar filtros
+            filtered_certs = certificates
+            if tipo_filtro:
+                filtered_certs = [
+                    cert for cert in filtered_certs
+                    if cert.get('type') in tipo_filtro
+                ]
+            if cliente_filtro:
+                filtered_certs = [
+                    cert for cert in filtered_certs
+                    if cliente_filtro.lower() in cert.get('client', '').lower()
+                ]
+            if estado_filtro:
+                filtered_certs = [
+                    cert for cert in filtered_certs
+                    if cert.get('status') in estado_filtro
+                ]
+
+            if not filtered_certs:
+                st.info("No hay datos que coincidan con los filtros seleccionados")
+                return
+
+            # Crear gráfico de línea de tiempo
+            dates = [cert.get('created_at', datetime.now()) for cert in filtered_certs]
+            types = [cert.get('type', 'N/A') for cert in filtered_certs]
+
+            fig = go.Figure()
+
+            # Agregar línea de tiempo
+            fig.add_trace(go.Scatter(
+                x=dates,
+                y=types,
+                mode='markers',
+                name='Calibraciones',
+                marker=dict(
+                    size=12,
+                    symbol='circle'
+                )
+            ))
+
+            # Configurar layout
+            fig.update_layout(
+                title="Línea de Tiempo de Calibraciones",
+                xaxis_title="Fecha",
+                yaxis_title="Tipo de Equipo",
+                height=400,
+                showlegend=True
+            )
+
+            # Mostrar gráfico
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Mostrar tabla de detalles
+            if st.checkbox("Ver detalles de calibraciones"):
+                df = pd.DataFrame(filtered_certs)
+                st.dataframe(
+                    df,
+                    column_config={
+                        "created_at": st.column_config.DatetimeColumn("Fecha"),
+                        "type": "Tipo",
+                        "client": "Cliente",
+                        "status": "Estado"
+                    },
+                    hide_index=True
+                )
+
+        except Exception as e:
+            Logger.error(f"Error mostrando timeline filtrado: {str(e)}")
+            st.error("Error al mostrar línea de tiempo")
 
     # ... resto del código ...
