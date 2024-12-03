@@ -36,13 +36,38 @@ class DashboardWidgets:
     def _add_sample_data(self) -> None:
         """Agrega datos de ejemplo para desarrollo"""
         try:
-            # Tipos de servicios según PROCyMI
+            # Servicios según PROCyMI (http://www.procymi.com.ar/)
             servicios = [
-                {"tipo": "Masa", "descripcion": "Calibración de balanzas y sistemas de pesaje"},
-                {"tipo": "Temperatura", "descripcion": "Calibración de termómetros y sensores"},
-                {"tipo": "Volumen", "descripcion": "Calibración de equipos de medición volumétrica"},
-                {"tipo": "Humedad", "descripcion": "Calibración de higrómetros"},
-                {"tipo": "Velocidad Angular", "descripcion": "Calibración de centrífugas"}
+                {
+                    "tipo": "Balanzas",
+                    "descripcion": "Calibración de balanzas analíticas y de precisión",
+                    "norma": "OIML R76",
+                    "rango": "Hasta 1000kg"
+                },
+                {
+                    "tipo": "Pesas",
+                    "descripcion": "Calibración de pesas patrón",
+                    "norma": "OIML R111",
+                    "rango": "1mg a 20kg"
+                },
+                {
+                    "tipo": "Termómetros",
+                    "descripcion": "Calibración de termómetros digitales y analógicos",
+                    "norma": "ISO/IEC 17025:2017",
+                    "rango": "-30°C a 200°C"
+                },
+                {
+                    "tipo": "Material Volumétrico",
+                    "descripcion": "Calibración de material volumétrico de vidrio y plástico",
+                    "norma": "ISO/IEC 17025:2017",
+                    "rango": "0.1mL a 2000mL"
+                },
+                {
+                    "tipo": "Higrómetros",
+                    "descripcion": "Calibración de higrómetros y termo-higrómetros",
+                    "norma": "ISO/IEC 17025:2017",
+                    "rango": "10% a 98% HR"
+                }
             ]
 
             for i, servicio in enumerate(servicios, 1):
@@ -54,8 +79,15 @@ class DashboardWidgets:
                     'created_at': datetime.now(),
                     'details': {
                         'type': servicio['tipo'],
+                        'rango_medicion': servicio['rango'],
+                        'norma': servicio['norma'],
                         'iso_certified': True,
-                        'location': 'Parque Tecnológico Misiones'
+                        'location': 'Parque Tecnológico Misiones',
+                        'environmental_conditions': {
+                            'temperature': 20.0,
+                            'humidity': 50.0,
+                            'pressure': 1013.25
+                        }
                     }
                 })
         except Exception as e:
@@ -65,7 +97,7 @@ class DashboardWidgets:
     def show_metrics_card(self) -> None:
         """Muestra tarjeta de métricas principales"""
         try:
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2, col3, col4, col5 = st.columns(5)
 
             with col1:
                 total_equipment = len(self.certificados.get_certificates())
@@ -76,37 +108,48 @@ class DashboardWidgets:
                 )
 
             with col2:
-                iso_certified = len([
+                oiml_certified = len([
                     c for c in self.certificados.get_certificates()
-                    if c.get('details', {}).get('iso_certified', False)
+                    if "OIML" in c.get('details', {}).get('norma', '')
                 ])
                 st.metric(
-                    "Certificaciones ISO",
-                    iso_certified,
-                    help="Calibraciones con certificación ISO 9001:2015"
+                    "Cert. OIML",
+                    oiml_certified,
+                    help="Calibraciones bajo normas OIML"
                 )
 
             with col3:
-                pending = len([
+                iso_certified = len([
                     c for c in self.certificados.get_certificates()
-                    if c['status'] == 'pending'
+                    if "17025" in c.get('details', {}).get('norma', '')
                 ])
                 st.metric(
-                    "En Proceso",
-                    pending,
-                    help="Calibraciones en proceso"
+                    "ISO 17025",
+                    iso_certified,
+                    help="Calibraciones bajo ISO/IEC 17025:2017"
                 )
 
             with col4:
+                onsite = len([
+                    c for c in self.certificados.get_certificates()
+                    if c.get('details', {}).get('location') == 'Instalaciones del Cliente'
+                ])
+                st.metric(
+                    "In Situ",
+                    onsite,
+                    help="Calibraciones realizadas en instalaciones del cliente"
+                )
+
+            with col5:
                 recalibration = len([
                     c for c in self.certificados.get_certificates()
                     if c.get('next_calibration') and
                     (c['next_calibration'] - datetime.now()).days < 30
                 ])
                 st.metric(
-                    "Recalibraciones Próximas",
+                    "Próximas",
                     recalibration,
-                    help="Equipos que requieren recalibración en 30 días"
+                    help="Calibraciones programadas próximos 30 días"
                 )
 
         except Exception as e:
@@ -287,7 +330,6 @@ class DashboardWidgets:
     def render(self) -> None:
         """Renderiza el dashboard"""
         try:
-<<<<<<< HEAD
             # Panel de Control
             st.header("📊 Panel de Control")
             self.show_metrics_card()
@@ -296,44 +338,18 @@ class DashboardWidgets:
             # Gestión
             st.header("🛠️ Gestión de Equipos y Calibraciones")
             tab1, tab2 = st.tabs(["📝 ABM Equipos", "🔧 ABM Calibraciones"])
-=======
-            # Agregar espacio superior
-            st.markdown("<br>", unsafe_allow_html=True)
 
-            # Métricas principales
-            st.header("📊 Panel de Control")
-            self.show_metrics_card()
-
-            # Agregar espacio entre secciones
-            st.markdown("<br><br><br>", unsafe_allow_html=True)
-
-            # ABM/CRUD de Equipos y Calibraciones
-            st.header("🛠️ Gestión de Equipos y Calibraciones")
-            tab1, tab2 = st.tabs(["📝 ABM Equipos", "🔧 ABM Calibraciones"])
-
->>>>>>> c8529e1dac050ee5f61d09305aa48ec61b5d91ab
             with tab1:
                 self._render_equipment_crud()
             with tab2:
                 self._render_calibration_crud()
-<<<<<<< HEAD
+
             st.markdown("<br><br>", unsafe_allow_html=True)
 
             # Estadísticas
             st.header("📈 Estadísticas y Análisis")
 
             # Calibraciones Mensuales
-=======
-
-            # Agregar espacio entre secciones
-            st.markdown("<br><br><br>", unsafe_allow_html=True)
-
-            # Historial y Estadísticas
-            st.header("📈 Análisis y Estadísticas")
-
-            # Historial de Calibraciones
-            st.subheader("Historial de Calibraciones")
->>>>>>> c8529e1dac050ee5f61d09305aa48ec61b5d91ab
             self.show_requests_timeline()
             st.markdown("<br><br>", unsafe_allow_html=True)
 
@@ -350,10 +366,6 @@ class DashboardWidgets:
         col1, col2 = st.columns([1, 1])
 
         with col1:
-<<<<<<< HEAD
-=======
-            # Alta (Altas)
->>>>>>> c8529e1dac050ee5f61d09305aa48ec61b5d91ab
             st.markdown("### Alta de Equipos")
             with st.form("new_equipment"):
                 eq_id = st.text_input("ID del Equipo")
@@ -397,8 +409,6 @@ class DashboardWidgets:
                         st.success("✅ Equipo registrado exitosamente")
                     except Exception as e:
                         st.error(f"❌ Error al registrar equipo: {str(e)}")
-<<<<<<< HEAD
-=======
 
         with col2:
             # Bajas y Modificaciones
@@ -443,7 +453,6 @@ class DashboardWidgets:
                                         st.rerun()
             else:
                 st.info("ℹ️ No hay equipos registrados")
->>>>>>> c8529e1dac050ee5f61d09305aa48ec61b5d91ab
 
     def _render_calibration_crud(self) -> None:
         """Renderiza CRUD de calibraciones"""
