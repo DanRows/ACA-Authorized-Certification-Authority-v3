@@ -251,3 +251,128 @@ class DashboardWidgets:
         except Exception as e:
             Logger.error(f"Error mostrando timeline filtrado: {str(e)}")
             st.error("Error al mostrar línea de tiempo")
+
+    def render(self) -> None:
+        """Renderiza el dashboard"""
+        try:
+            # Contenedor principal con padding
+            st.markdown("""
+                <style>
+                    .main-container { padding: 2rem 0; }
+                    .block-container { padding-top: 1rem; }
+                    .metric-card {
+                        background-color: #f8f9fa;
+                        padding: 1rem;
+                        border-radius: 0.5rem;
+                        margin-bottom: 1rem;
+                    }
+                    .chart-container {
+                        margin: 2rem 0;
+                        padding: 1rem;
+                        background-color: white;
+                        border-radius: 0.5rem;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }
+                </style>
+            """, unsafe_allow_html=True)
+
+            with st.container():
+                # Sección 1: Métricas Principales
+                st.header("📊 Panel de Control")
+                st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+                self.show_metrics_card()
+                st.markdown("</div>", unsafe_allow_html=True)
+
+                # Espacio entre secciones
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # Sección 2: Historial de Calibraciones
+                st.header("📈 Historial de Calibraciones")
+                st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
+                self.show_requests_timeline()
+                st.markdown("</div>", unsafe_allow_html=True)
+
+                # Espacio entre secciones
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # Sección 3: Análisis por Tipo de Servicio
+                st.header("🔍 Análisis por Tipo de Servicio")
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
+                    self._render_service_distribution()
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+                with col2:
+                    st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
+                    self._render_location_distribution()
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+        except Exception as e:
+            Logger.error(f"Error en dashboard: {str(e)}")
+            st.error("Error cargando el dashboard")
+
+    def _render_service_distribution(self) -> None:
+        """Renderiza distribución por tipo de servicio"""
+        try:
+            certificates = self.certificados.get_certificates()
+            if not certificates:
+                st.info("No hay datos disponibles")
+                return
+
+            service_counts = {}
+            for cert in certificates:
+                service_type = cert.get('type', 'Otros')
+                service_counts[service_type] = service_counts.get(service_type, 0) + 1
+
+            fig = go.Figure(data=[
+                go.Pie(
+                    labels=list(service_counts.keys()),
+                    values=list(service_counts.values()),
+                    hole=.3
+                )
+            ])
+            fig.update_layout(
+                title="Distribución por Tipo de Servicio",
+                height=350,
+                margin=dict(t=30, b=0, l=0, r=0)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            Logger.error(f"Error mostrando distribución de servicios: {str(e)}")
+            st.error("Error al mostrar distribución")
+
+    def _render_location_distribution(self) -> None:
+        """Renderiza distribución por ubicación"""
+        try:
+            certificates = self.certificados.get_certificates()
+            if not certificates:
+                st.info("No hay datos disponibles")
+                return
+
+            location_counts = {}
+            for cert in certificates:
+                location = cert.get('details', {}).get('location', 'No especificado')
+                location_counts[location] = location_counts.get(location, 0) + 1
+
+            fig = go.Figure(data=[
+                go.Bar(
+                    x=list(location_counts.keys()),
+                    y=list(location_counts.values()),
+                    text=list(location_counts.values()),
+                    textposition='auto',
+                )
+            ])
+            fig.update_layout(
+                title="Calibraciones por Ubicación",
+                height=350,
+                margin=dict(t=30, b=0, l=0, r=0),
+                showlegend=False
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            Logger.error(f"Error mostrando distribución por ubicación: {str(e)}")
+            st.error("Error al mostrar distribución")
