@@ -288,6 +288,12 @@ class DashboardWidgets:
             # Agregar espacio entre secciones
             st.markdown("<br><br>", unsafe_allow_html=True)
 
+            # Operaciones CRUD
+            self.show_crud_operations()
+
+            # Agregar espacio entre secciones
+            st.markdown("<br><br>", unsafe_allow_html=True)
+
             # Historial de Calibraciones
             self.show_requests_timeline()
 
@@ -300,5 +306,135 @@ class DashboardWidgets:
         except Exception as e:
             Logger.error(f"Error en dashboard: {str(e)}")
             st.error("Error cargando el dashboard")
+
+    def show_crud_operations(self) -> None:
+        """Muestra operaciones CRUD para equipos y calibraciones"""
+        try:
+            st.subheader("Gestión de Equipos y Calibraciones")
+
+            # Tabs para separar operaciones
+            tab1, tab2 = st.tabs(["Equipos", "Calibraciones"])
+
+            with tab1:
+                self._render_equipment_crud()
+
+            with tab2:
+                self._render_calibration_crud()
+
+        except Exception as e:
+            Logger.error(f"Error en operaciones CRUD: {str(e)}")
+            st.error("Error en operaciones de gestión")
+
+    def _render_equipment_crud(self) -> None:
+        """Renderiza CRUD de equipos"""
+        # Alta (Create)
+        with st.expander("Agregar Nuevo Equipo"):
+            with st.form("new_equipment"):
+                eq_id = st.text_input("ID del Equipo")
+                eq_type = st.selectbox(
+                    "Tipo de Equipo",
+                    ["Balanza", "Termómetro", "Manómetro", "Calibrador", "Otro"]
+                )
+                client = st.text_input("Cliente")
+                details = st.text_area("Detalles")
+
+                if st.form_submit_button("Agregar"):
+                    try:
+                        self.certificados.add_certificate({
+                            'id': eq_id,
+                            'type': eq_type,
+                            'client': client,
+                            'details': {'description': details},
+                            'status': 'pending',
+                            'created_at': datetime.now()
+                        })
+                        st.success("Equipo agregado exitosamente")
+                    except Exception as e:
+                        st.error(f"Error al agregar equipo: {str(e)}")
+
+        # Consulta y Modificación (Read & Update)
+        with st.expander("Consultar/Modificar Equipos"):
+            equipment = self.certificados.get_certificates()
+            if equipment:
+                for eq in equipment:
+                    col1, col2, col3 = st.columns([2,1,1])
+                    with col1:
+                        st.write(f"ID: {eq['id']} - {eq.get('type', 'N/A')}")
+                    with col2:
+                        if st.button("Editar", key=f"edit_{eq['id']}"):
+                            st.session_state.editing_equipment = eq['id']
+                    with col3:
+                        if st.button("Eliminar", key=f"delete_{eq['id']}"):
+                            if self.certificados.delete_certificate(eq['id']):
+                                st.success("Equipo eliminado")
+                                st.rerun()
+
+                    # Formulario de edición
+                    if st.session_state.get('editing_equipment') == eq['id']:
+                        with st.form(f"edit_equipment_{eq['id']}"):
+                            new_type = st.selectbox(
+                                "Tipo de Equipo",
+                                ["Balanza", "Termómetro", "Manómetro", "Calibrador", "Otro"],
+                                index=["Balanza", "Termómetro", "Manómetro", "Calibrador", "Otro"].index(eq.get('type', 'Otro'))
+                            )
+                            new_status = st.selectbox(
+                                "Estado",
+                                ["pending", "active", "calibrated"],
+                                index=["pending", "active", "calibrated"].index(eq.get('status', 'pending'))
+                            )
+
+                            if st.form_submit_button("Guardar Cambios"):
+                                if self.certificados.update_certificate(eq['id'], {
+                                    'type': new_type,
+                                    'status': new_status
+                                }):
+                                    st.success("Cambios guardados")
+                                    st.session_state.editing_equipment = None
+                                    st.rerun()
+            else:
+                st.info("No hay equipos registrados")
+
+    def _render_calibration_crud(self) -> None:
+        """Renderiza CRUD de calibraciones"""
+        # Alta de Calibración
+        with st.expander("Nueva Calibración"):
+            with st.form("new_calibration"):
+                equipment_id = st.selectbox(
+                    "Equipo",
+                    [eq['id'] for eq in self.certificados.get_certificates()]
+                )
+                calibration_date = st.date_input("Fecha de Calibración")
+                next_calibration = st.date_input("Próxima Calibración")
+                observations = st.text_area("Observaciones")
+
+                if st.form_submit_button("Registrar Calibración"):
+                    try:
+                        self.certificados.update_certificate(equipment_id, {
+                            'calibration_date': calibration_date,
+                            'next_calibration': next_calibration,
+                            'status': 'calibrated',
+                            'details': {
+                                'observations': observations,
+                                'completion_date': datetime.now()
+                            }
+                        })
+                        st.success("Calibración registrada")
+                    except Exception as e:
+                        st.error(f"Error al registrar calibración: {str(e)}")
+
+        # Historial de Calibraciones
+        with st.expander("Historial de Calibraciones"):
+            calibrated = [
+                cert for cert in self.certificados.get_certificates()
+                if cert.get('status') == 'calibrated'
+            ]
+            if calibrated:
+                for cert in calibrated:
+                    st.write(f"Equipo: {cert['id']}")
+                    st.write(f"Última calibración: {cert.get('calibration_date', 'N/A')}")
+                    st.write(f"Próxima calibración: {cert.get('next_calibration', 'N/A')}")
+                    st.divider()
+            else:
+                st.info("No hay calibraciones registradas")
 
     # ... resto del código ...

@@ -76,16 +76,12 @@ class Sidebar:
                         .logo-container {
                             display: flex;
                             justify-content: center;
-                            padding: 2rem 0;
-                            background-color: #ffffff;
-                            margin: 1rem 0 3rem 0;
+                            padding: 1rem 0;
+                            margin-bottom: 2rem;
                         }
                         .logo-container img {
                             max-width: 150px;
                             height: auto;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                            border-radius: 8px;
-                            padding: 10px;
                         }
                     </style>
                 """
