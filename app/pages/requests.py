@@ -2,151 +2,377 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
-from app.components.notifications import Notifications
 from app.components.solicitudes import Solicitudes
-from app.utils.cache import cached
 from app.utils.logger import Logger
 
 
 class RequestsPage:
     def __init__(self):
         self.solicitudes = Solicitudes()
-        self.notifications = Notifications()
         self._initialize_state()
 
     def _initialize_state(self) -> None:
         """Inicializa el estado de la página"""
-        if 'requests_filter' not in st.session_state:
-            st.session_state.requests_filter = "all"
-        if 'date_range' not in st.session_state:
-            st.session_state.date_range = (
-                datetime.now() - timedelta(days=30),
-                datetime.now()
-            )
-        if 'selected_request' not in st.session_state:
-            st.session_state.selected_request = None
+        if 'editing_request' not in st.session_state:
+            st.session_state.editing_request = None
 
     def render(self) -> None:
         """Renderiza la página de solicitudes"""
         try:
-            st.title("Gestión de Solicitudes")
+            st.title("Gestión de Solicitudes de Calibración")
 
-            # Filtros y controles
-            self._render_filters()
+            # Tabs para diferentes secciones
+            tab1, tab2, tab3 = st.tabs([
+                "📝 Nueva Solicitud",
+                "📋 Solicitudes Activas",
+                "📊 Resumen"
+            ])
 
-            # Vista principal
-            col1, col2 = st.columns([2, 1])
-
-            with col1:
+            with tab1:
+                self._render_new_request_form()
+            with tab2:
                 self._render_requests_list()
-
-            with col2:
-                if st.session_state.selected_request:
-                    self._render_request_details()
-                else:
-                    self._render_statistics()
+            with tab3:
+                self._render_requests_summary()
 
         except Exception as e:
             Logger.error(f"Error en página de solicitudes: {str(e)}")
             st.error("Error cargando solicitudes")
 
-    @cached(ttl=300)
-    def _get_filtered_requests(self) -> List[Dict]:
-        """Obtiene solicitudes filtradas con caché"""
-        try:
-            status = st.session_state.requests_filter
-            date_range = st.session_state.date_range
+    def _render_new_request_form(self) -> None:
+        """Renderiza formulario de nueva solicitud"""
+        with st.form("new_request"):
+            st.subheader("Nueva Solicitud de Calibración")
 
-            requests = self.solicitudes.get_requests()
-            filtered = [
-                r for r in requests
-                if (status == "all" or r["status"] == status) and
-                date_range[0] <= r["created_at"] <= date_range[1]
-            ]
-            return filtered
+            # Información del cliente
+            st.markdown("##### Información del Cliente")
+            col1, col2 = st.columns(2)
+            with col1:
+                client = st.text_input("Cliente")
+                contact = st.text_input("Persona de Contacto")
+            with col2:
+                email = st.text_input("Email")
+                phone = st.text_input("Teléfono")
 
-        except Exception as e:
-            Logger.error(f"Error filtrando solicitudes: {str(e)}")
-            return []
+            # Información del servicio
+            st.markdown("##### Detalles del Servicio")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                service_type = st.selectbox(
+                    "Tipo de Servicio",
+                    [
+                        "Calibración de Balanzas",
+                        "Calibración de Termómetros",
+                        "Calibración de Material Volumétrico",
+                        "Calibración de Higrómetros",
+                        "Verificación de Balanzas",
+                        "Mantenimiento Preventivo"
+                    ]
+                )
+            with col2:
+                urgency = st.selectbox(
+                    "Urgencia",
+                    ["Normal", "Urgente", "Muy Urgente"]
+                )
+            with col3:
+                location = st.selectbox(
+                    "Ubicación del Servicio",
+                    ["Laboratorio PROCyMI", "Instalaciones del Cliente"]
+                )
 
-    def _render_filters(self) -> None:
-        """Renderiza filtros de solicitudes"""
-        col1, col2 = st.columns(2)
+            # Detalles del equipo
+            st.markdown("##### Información del Equipo")
+            col1, col2 = st.columns(2)
+            with col1:
+                equipment_type = st.selectbox(
+                    "Tipo de Equipo",
+                    [
+                        "Balanza Analítica",
+                        "Balanza de Precisión",
+                        "Termómetro Digital",
+                        "Termómetro Analógico",
+                        "Material Volumétrico",
+                        "Higrómetro"
+                    ]
+                )
+                brand = st.text_input("Marca")
+                model = st.text_input("Modelo")
+            with col2:
+                serial = st.text_input("Número de Serie")
+                last_calibration = st.date_input(
+                    "Última Calibración",
+                    value=None,
+                    help="Dejar vacío si es primera calibración"
+                )
 
-        with col1:
-            st.session_state.requests_filter = st.selectbox(
-                "Estado",
-                ["all", "pending", "completed", "rejected"],
-                format_func=lambda x: {
-                    "all": "Todas",
-                    "pending": "Pendientes",
-                    "completed": "Completadas",
-                    "rejected": "Rechazadas"
-                }[x]
+            # Requisitos especiales
+            st.markdown("##### Requisitos Especiales")
+            col1, col2 = st.columns(2)
+            with col1:
+                needs_adjustment = st.checkbox("Requiere Ajuste")
+                needs_maintenance = st.checkbox("Requiere Mantenimiento")
+            with col2:
+                iso_required = st.checkbox("Requiere Certificación ISO")
+                express_service = st.checkbox("Servicio Express")
+
+            # Observaciones
+            observations = st.text_area("Observaciones Adicionales")
+
+            # Fecha deseada
+            desired_date = st.date_input(
+                "Fecha Deseada",
+                min_value=datetime.now().date(),
+                value=datetime.now().date() + timedelta(days=7)
             )
 
-        with col2:
-            st.session_state.date_range = st.date_input(
-                "Rango de Fechas",
-                value=st.session_state.date_range
-            )
+            if st.form_submit_button("Enviar Solicitud"):
+                self._create_request(
+                    client=client,
+                    contact=contact,
+                    email=email,
+                    phone=phone,
+                    service_type=service_type,
+                    urgency=urgency,
+                    location=location,
+                    equipment={
+                        'type': equipment_type,
+                        'brand': brand,
+                        'model': model,
+                        'serial': serial,
+                        'last_calibration': last_calibration
+                    },
+                    requirements={
+                        'needs_adjustment': needs_adjustment,
+                        'needs_maintenance': needs_maintenance,
+                        'iso_required': iso_required,
+                        'express_service': express_service
+                    },
+                    observations=observations,
+                    desired_date=desired_date
+                )
 
     def _render_requests_list(self) -> None:
-        """Renderiza lista de solicitudes"""
-        requests = self._get_filtered_requests()
-
-        if not requests:
-            st.info("No se encontraron solicitudes con los filtros actuales")
-            return
-
-        df = pd.DataFrame(requests)
-        st.dataframe(
-            df,
-            column_config={
-                "created_at": st.column_config.DatetimeColumn("Fecha"),
-                "status": st.column_config.SelectboxColumn(
-                    "Estado",
-                    options=["pending", "completed", "rejected"]
-                )
-            },
-            hide_index=True
-        )
-
-    def _render_request_details(self) -> None:
-        """Renderiza detalles de una solicitud"""
-        request = st.session_state.selected_request
-        st.subheader(f"Solicitud #{request['id']}")
-
-        col1, col2 = st.columns(2)
+        """Renderiza lista de solicitudes activas"""
+        # Filtros
+        col1, col2, col3 = st.columns(3)
         with col1:
-            st.write(f"Estado: {request['status']}")
-            st.write(f"Fecha: {request['created_at']}")
+            search = st.text_input("🔍 Buscar", placeholder="Cliente o ID")
         with col2:
-            st.write(f"Proveedor: {request.get('provider', 'N/A')}")
+            status_filter = st.multiselect(
+                "Estado",
+                ["Pendiente", "En Proceso", "Completada", "Cancelada"]
+            )
+        with col3:
+            urgency_filter = st.multiselect(
+                "Urgencia",
+                ["Normal", "Urgente", "Muy Urgente"]
+            )
 
-        # Acciones
-        if st.button("Marcar como Completada"):
-            self.solicitudes.update_request(request['id'], {"status": "completed"})
-            st.success("Solicitud actualizada")
-            st.rerun()
+        # Obtener y filtrar solicitudes
+        requests = self.solicitudes.get_requests()
+        filtered = self._apply_filters(requests, search, status_filter, urgency_filter)
 
-    def _render_statistics(self) -> None:
-        """Renderiza estadísticas de solicitudes"""
-        requests = self._get_filtered_requests()
-
-        if not requests:
+        if not filtered:
+            st.info("No hay solicitudes que coincidan con los filtros")
             return
 
-        st.subheader("Estadísticas")
+        # Mostrar solicitudes
+        for req in filtered:
+            with st.expander(
+                f"📋 {req['id']} - {req.get('client', 'N/A')} ({req.get('service_type', 'N/A')})",
+                expanded=False
+            ):
+                self._render_request_details(req)
 
-        # Gráfico de estado
-        status_counts = pd.DataFrame(requests)['status'].value_counts()
-        st.bar_chart(status_counts)
+    def _render_request_details(self, request: Dict) -> None:
+        """Renderiza detalles de una solicitud"""
+        col1, col2 = st.columns([3, 1])
+
+        with col1:
+            # Información básica
+            st.markdown(f"""
+                **Cliente:** {request.get('client', 'N/A')}
+                **Contacto:** {request.get('contact', 'N/A')}
+                **Email:** {request.get('email', 'N/A')}
+                **Teléfono:** {request.get('phone', 'N/A')}
+            """)
+
+            # Detalles del servicio
+            st.markdown("##### Detalles del Servicio")
+            st.markdown(f"""
+                **Tipo:** {request.get('service_type', 'N/A')}
+                **Urgencia:** {request.get('urgency', 'N/A')}
+                **Ubicación:** {request.get('location', 'N/A')}
+                **Fecha Deseada:** {request.get('desired_date', 'N/A')}
+            """)
+
+            # Información del equipo
+            if equipment := request.get('equipment', {}):
+                st.markdown("##### Equipo")
+                st.markdown(f"""
+                    **Tipo:** {equipment.get('type', 'N/A')}
+                    **Marca:** {equipment.get('brand', 'N/A')}
+                    **Modelo:** {equipment.get('model', 'N/A')}
+                    **Serie:** {equipment.get('serial', 'N/A')}
+                """)
+
+        with col2:
+            # Acciones
+            st.markdown("##### Acciones")
+            status = request.get('status', 'pending')
+
+            if status == 'pending':
+                if st.button("✅ Aprobar", key=f"approve_{request['id']}"):
+                    self._approve_request(request)
+                if st.button("❌ Rechazar", key=f"reject_{request['id']}"):
+                    self._reject_request(request)
+            elif status == 'approved':
+                if st.button("🔄 Iniciar", key=f"start_{request['id']}"):
+                    self._start_request(request)
+            elif status == 'in_progress':
+                if st.button("✨ Completar", key=f"complete_{request['id']}"):
+                    self._complete_request(request)
+
+            if st.button("📝 Editar", key=f"edit_{request['id']}"):
+                st.session_state.editing_request = request['id']
+
+    def _render_requests_summary(self) -> None:
+        """Renderiza resumen de solicitudes"""
+        requests = self.solicitudes.get_requests()
+        if not requests:
+            st.info("No hay datos para analizar")
+            return
+
+        # Convertir a DataFrame
+        df = pd.DataFrame(requests)
+
+        # Métricas principales
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Solicitudes", len(df))
+        with col2:
+            pending = len(df[df['status'] == 'pending'])
+            st.metric("Pendientes", pending)
+        with col3:
+            in_progress = len(df[df['status'] == 'in_progress'])
+            st.metric("En Proceso", in_progress)
+        with col4:
+            completed = len(df[df['status'] == 'completed'])
+            st.metric("Completadas", completed)
+
+        # Gráficos
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # Distribución por estado
+            fig = px.pie(
+                df,
+                names='status',
+                title="Distribución por Estado"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            # Solicitudes por tipo de servicio
+            service_counts = df['service_type'].value_counts()
+            fig = px.bar(
+                service_counts,
+                title="Solicitudes por Tipo de Servicio"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+    def _create_request(self, **kwargs) -> None:
+        """Crea una nueva solicitud"""
+        try:
+            request = {
+                'id': f'REQ{len(self.solicitudes.get_requests()) + 1:04d}',
+                'status': 'pending',
+                'created_at': datetime.now(),
+                **kwargs
+            }
+            self.solicitudes.add_request(request)
+            st.success("✅ Solicitud enviada exitosamente")
+            st.balloons()
+        except Exception as e:
+            st.error(f"❌ Error al enviar solicitud: {str(e)}")
+
+    def _apply_filters(self, requests: List[Dict], search: str,
+                      status_filter: List[str], urgency_filter: List[str]) -> List[Dict]:
+        """Aplica filtros a la lista de solicitudes"""
+        filtered = requests
+
+        if search:
+            filtered = [
+                r for r in filtered
+                if search.lower() in r.get('client', '').lower() or
+                search.lower() in r.get('id', '').lower()
+            ]
+
+        if status_filter:
+            filtered = [
+                r for r in filtered
+                if r.get('status', '').title() in status_filter
+            ]
+
+        if urgency_filter:
+            filtered = [
+                r for r in filtered
+                if r.get('urgency', '') in urgency_filter
+            ]
+
+        return filtered
+
+    def _approve_request(self, request: Dict) -> None:
+        """Aprueba una solicitud"""
+        try:
+            request['status'] = 'approved'
+            self.solicitudes.update_request(request['id'], request)
+            st.success("✅ Solicitud aprobada")
+            st.rerun()
+        except Exception as e:
+            st.error(f"❌ Error al aprobar solicitud: {str(e)}")
+
+    def _reject_request(self, request: Dict) -> None:
+        """Rechaza una solicitud"""
+        try:
+            request['status'] = 'rejected'
+            self.solicitudes.update_request(request['id'], request)
+            st.success("Solicitud rechazada")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error al rechazar solicitud: {str(e)}")
+
+    def _start_request(self, request: Dict) -> None:
+        """Inicia el proceso de una solicitud"""
+        try:
+            request['status'] = 'in_progress'
+            request['started_at'] = datetime.now()
+            self.solicitudes.update_request(request['id'], request)
+            st.success("✅ Proceso iniciado")
+            st.rerun()
+        except Exception as e:
+            st.error(f"❌ Error al iniciar proceso: {str(e)}")
+
+    def _complete_request(self, request: Dict) -> None:
+        """Completa una solicitud"""
+        try:
+            request['status'] = 'completed'
+            request['completed_at'] = datetime.now()
+            self.solicitudes.update_request(request['id'], request)
+            st.success("✅ Solicitud completada")
+            st.rerun()
+        except Exception as e:
+            st.error(f"❌ Error al completar solicitud: {str(e)}")
 
 
 def render_requests_page():
     """Punto de entrada para la página de solicitudes"""
-    page = RequestsPage()
-    page.render()
+    try:
+        page = RequestsPage()
+        page.render()
+    except Exception as e:
+        Logger.error(f"Error en página de solicitudes: {str(e)}")
+        st.error("Error cargando la página de solicitudes")
