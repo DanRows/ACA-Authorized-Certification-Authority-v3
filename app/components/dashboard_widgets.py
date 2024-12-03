@@ -4,7 +4,6 @@ from typing import Dict, List
 import plotly.graph_objects as go  # type: ignore
 import streamlit as st  # type: ignore
 
-from app.components.analytics_dashboard import AnalyticsDashboard
 from app.components.certificados import Certificados
 from app.components.solicitudes import Solicitudes
 from app.utils.db import DatabaseManager
@@ -25,6 +24,9 @@ class DashboardWidgets:
             try:
                 self.solicitudes = solicitudes
                 self.certificados = certificados
+                # Importación local para evitar ciclos
+                from app.components.analytics_dashboard import AnalyticsDashboard
+                self.analytics = AnalyticsDashboard(solicitudes, certificados)
                 # Agregar datos de ejemplo solo una vez
                 if len(self.solicitudes.get_requests()) == 0:
                     self._add_sample_data()
@@ -176,7 +178,12 @@ class DashboardWidgets:
                     ["Pendiente", "En Proceso", "Completado", "Vencido"]
                 )
 
-            # Resto del código de visualización...
+            # Aplicar filtros y mostrar datos
+            self._show_filtered_timeline(tipo_filtro, cliente_filtro, estado_filtro)
+
+        except Exception as e:
+            Logger.error(f"Error mostrando línea de tiempo: {str(e)}")
+            st.error("Error al mostrar historial de calibraciones")
 
     def show_provider_stats(self) -> None:
         """Muestra estadísticas de servicios metrológicos"""

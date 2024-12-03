@@ -179,3 +179,16 @@ class SettingsPage:
                 st.session_state.settings_modified = False
             except Exception as e:
                 st.error(f"Error guardando configuración: {str(e)}")
+
+def render_settings_page():
+    """Punto de entrada para la página de configuración"""
+    try:
+        # Importaciones locales para evitar ciclos
+        from app.components.notifications import Notifications
+        from app.config.configuration import Configuration
+
+        settings_page = SettingsPage()
+        settings_page.render()
+    except Exception as e:
+        Logger.error(f"Error en página de configuración: {str(e)}")
+        st.error("Error cargando configuración")
