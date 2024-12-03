@@ -1,9 +1,12 @@
 from datetime import datetime, timedelta
+from typing import Dict, List
 
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from app.components.certificados import Certificados
+from app.components.dashboard_widgets import DashboardWidgets
 from app.components.solicitudes import Solicitudes
 from app.utils.logger import Logger
 
@@ -22,6 +25,7 @@ class MetricsDashboard:
             try:
                 self.solicitudes = Solicitudes()
                 self.certificados = Certificados()
+                self.widgets = DashboardWidgets(self.solicitudes, self.certificados)
                 # Agregar datos de ejemplo solo una vez
                 self._add_sample_data()
                 self.__class__._initialized = True
@@ -145,7 +149,7 @@ class MetricsDashboard:
             Logger.error(f"Error en distribución de estados: {str(e)}")
             st.error("Error mostrando distribución de estados")
 
-    def get_metrics_summary(self) -> Dict:
+    def get_metrics_summary(self) -> Dict[str, int]:
         """Obtiene resumen de métricas"""
         try:
             requests = self.solicitudes.get_requests()
@@ -161,7 +165,7 @@ class MetricsDashboard:
             Logger.error(f"Error obteniendo métricas: {str(e)}")
             return {}
 
-    def _calculate_success_rate(self, requests: List[Dict]) -> float:
+    def _calculate_success_rate(self, requests: List[Dict[str, any]]) -> float:
         """Calcula la tasa de éxito de las solicitudes"""
         try:
             if not requests:
