@@ -68,6 +68,9 @@ class ACMADashboard:
             # Renderizar la página correspondiente
             if current_page == "home":
                 self.metrics.render()
+            elif current_page == "clients":
+                from app.pages.clients import render_clients_page
+                render_clients_page()
             elif current_page == "certificates":
                 self.certificados_page()
             elif current_page == "requests":

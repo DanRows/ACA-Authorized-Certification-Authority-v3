@@ -115,20 +115,25 @@ class Sidebar:
                                 "icon": "🏠",
                                 "order": 1
                             },
+                            "clients": {
+                                "name": "Clientes",
+                                "icon": "👥",
+                                "order": 2
+                            },
                             "certificates": {
                                 "name": "Certificados",
                                 "icon": "📜",
-                                "order": 2
+                                "order": 3
                             },
                             "requests": {
                                 "name": "Solicitudes",
                                 "icon": "📝",
-                                "order": 3
+                                "order": 4
                             },
                             "settings": {
                                 "name": "Configuración",
                                 "icon": "⚙️",
-                                "order": 4
+                                "order": 5
                             }
                         }
 
