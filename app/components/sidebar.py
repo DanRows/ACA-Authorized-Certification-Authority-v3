@@ -23,8 +23,8 @@ class Sidebar:
     def _get_logo_base64(self) -> str:
         """Obtiene el logo en formato base64"""
         try:
-            # Obtener la ruta absoluta del logo
-            logo_path = Path(__file__).parent.parent.absolute() / "static" / "images" / "procymi_logo.png"
+            # Obtener la ruta absoluta del logo desde assets
+            logo_path = Path(__file__).parent.parent.parent / "assets" / "procymi_logo.png"
 
             # Depurar la ruta
             Logger.info(f"Buscando logo en: {logo_path}")
