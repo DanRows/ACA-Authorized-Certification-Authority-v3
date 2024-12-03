@@ -161,64 +161,22 @@ class DashboardWidgets:
         try:
             st.subheader("Historial de Calibraciones")
 
-            # Gráfico de calibraciones por mes
-            certificates = self.certificados.get_certificates()
-            if not certificates:
-                st.info("No hay datos de calibraciones para mostrar")
-                return
-
-            # Agregar espacio
-            st.markdown("<br>", unsafe_allow_html=True)
-
-            # Gráfico 1: Calibraciones Mensuales
-            monthly_data = {}
-            for cert in certificates:
-                month = cert['created_at'].strftime('%Y-%m')
-                monthly_data[month] = monthly_data.get(month, 0) + 1
-
-            fig1 = go.Figure()
-            fig1.add_trace(go.Bar(
-                x=list(monthly_data.keys()),
-                y=list(monthly_data.values()),
-                name='Calibraciones por Mes'
-            ))
-            fig1.update_layout(
-                title="Calibraciones Mensuales",
-                xaxis_title="Mes",
-                yaxis_title="Cantidad",
-                height=400,
-                width=None,  # Esto permite que ocupe el ancho completo
-                showlegend=True
-            )
-            st.plotly_chart(fig1, use_container_width=True)
-
-            # Agregar espacio entre gráficos
-            st.markdown("<br><br>", unsafe_allow_html=True)
-
-            # Gráfico 2: Tipos de Equipos
-            equipment_types = {}
-            for cert in certificates:
-                eq_type = cert.get('details', {}).get('type', 'Otros')
-                equipment_types[eq_type] = equipment_types.get(eq_type, 0) + 1
-
-            fig2 = go.Figure(data=[
-                go.Pie(
-                    labels=list(equipment_types.keys()),
-                    values=list(equipment_types.values()),
-                    hole=.3
+            # Filtros
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                tipo_filtro = st.multiselect(
+                    "Tipo de Equipo",
+                    ["Balanzas", "Pesas", "Termómetros", "Material Volumétrico", "Higrómetros"]
                 )
-            ])
-            fig2.update_layout(
-                title="Tipos de Equipos Calibrados",
-                height=400,
-                width=None,
-                showlegend=True
-            )
-            st.plotly_chart(fig2, use_container_width=True)
+            with col2:
+                cliente_filtro = st.text_input("Buscar por Cliente")
+            with col3:
+                estado_filtro = st.multiselect(
+                    "Estado",
+                    ["Pendiente", "En Proceso", "Completado", "Vencido"]
+                )
 
-        except Exception as e:
-            Logger.error(f"Error mostrando línea de tiempo: {str(e)}")
-            st.error("Error al mostrar historial de calibraciones")
+            # Resto del código de visualización...
 
     def show_provider_stats(self) -> None:
         """Muestra estadísticas de servicios metrológicos"""
@@ -372,24 +330,71 @@ class DashboardWidgets:
                 eq_type = st.selectbox(
                     "Tipo de Servicio",
                     [
-                        "Masa",
-                        "Temperatura",
-                        "Volumen",
-                        "Humedad",
-                        "Velocidad Angular"
+                        "Balanzas Analíticas",
+                        "Balanzas de Precisión",
+                        "Balanzas Industriales",
+                        "Pesas Patrón",
+                        "Termómetros Digitales",
+                        "Termómetros Analógicos",
+                        "Material Volumétrico de Vidrio",
+                        "Material Volumétrico de Plástico",
+                        "Higrómetros",
+                        "Termo-higrómetros"
                     ]
                 )
-                client = st.text_input("Cliente")
+
+                # Agregar rango de medición según tipo
+                ranges = {
+                    "Balanzas Analíticas": "0.1mg - 200g",
+                    "Balanzas de Precisión": "0.01g - 10kg",
+                    "Balanzas Industriales": "0.1kg - 1000kg",
+                    "Pesas Patrón": "1mg - 20kg",
+                    "Termómetros Digitales": "-30°C a 200°C",
+                    "Termómetros Analógicos": "-30°C a 200°C",
+                    "Material Volumétrico de Vidrio": "0.1mL - 2000mL",
+                    "Material Volumétrico de Plástico": "1mL - 2000mL",
+                    "Higrómetros": "10% - 98% HR",
+                    "Termo-higrómetros": "10% - 98% HR / -30°C a 70°C"
+                }
+
+                rango_medicion = st.text_input(
+                    "Rango de Medición",
+                    value=ranges.get(eq_type, ""),
+                    help="Rango de medición del equipo"
+                )
+
+                # Agregar campos específicos de PROCyMI
+                col1, col2 = st.columns(2)
+                with col1:
+                    client = st.text_input("Cliente")
+                    marca = st.text_input("Marca del Equipo")
+                    modelo = st.text_input("Modelo")
+                with col2:
+                    serie = st.text_input("Número de Serie")
+                    codigo_interno = st.text_input("Código Interno Cliente")
+                    division_escala = st.text_input("División de Escala")
+
                 location = st.selectbox(
-                    "Ubicación",
+                    "Ubicación del Servicio",
                     [
-                        "Parque Tecnológico Misiones",
-                        "Universidad Nacional de Misiones",
+                        "Laboratorio PROCyMI",
+                        "Instalaciones del Cliente",
                         "Laboratorio Móvil"
                     ]
                 )
-                details = st.text_area("Detalles Técnicos")
-                iso_certified = st.checkbox("Requiere Certificación ISO 9001:2015")
+
+                # Campos de certificación
+                col1, col2 = st.columns(2)
+                with col1:
+                    iso_certified = st.checkbox("Certificación ISO 17025")
+                    oiml_certified = st.checkbox("Certificación OIML")
+                with col2:
+                    requiere_ajuste = st.checkbox("Requiere Ajuste")
+                    requiere_mantenimiento = st.checkbox("Requiere Mantenimiento")
+
+                # Observaciones y detalles
+                observaciones = st.text_area("Observaciones")
+                detalles_tecnicos = st.text_area("Detalles Técnicos Adicionales")
 
                 if st.form_submit_button("Registrar Equipo"):
                     try:
@@ -399,8 +404,18 @@ class DashboardWidgets:
                             'client': client,
                             'location': location,
                             'details': {
-                                'description': details,
+                                'marca': marca,
+                                'modelo': modelo,
+                                'serie': serie,
+                                'codigo_interno': codigo_interno,
+                                'division_escala': division_escala,
+                                'rango_medicion': rango_medicion,
                                 'iso_certified': iso_certified,
+                                'oiml_certified': oiml_certified,
+                                'requiere_ajuste': requiere_ajuste,
+                                'requiere_mantenimiento': requiere_mantenimiento,
+                                'observaciones': observaciones,
+                                'detalles_tecnicos': detalles_tecnicos,
                                 'service_type': eq_type
                             },
                             'status': 'pending',
