@@ -18,12 +18,28 @@ from app.utils.logger import Logger
 
 class ACMADashboard:
     def __init__(self):
-        # Importaciones locales para evitar ciclos
+        # Importaciones básicas primero
+        from app.components.auth import Auth
+        from app.components.certificados import Certificados
+        from app.components.sidebar import Sidebar
+        from app.components.solicitudes import Solicitudes
+
+        # Inicializar componentes básicos
+        self.config = Configuration()
+        self.auth = Auth()
+        self.certificados = Certificados()
+        self.solicitudes = Solicitudes()
+        self.sidebar = Sidebar()
+
+        # Ahora importar e inicializar componentes que dependen de los básicos
         from app.components.dashboard_widgets import DashboardWidgets
         from app.components.metrics_dashboard import MetricsDashboard
 
         self.dashboard = DashboardWidgets(self.solicitudes, self.certificados)
         self.metrics = MetricsDashboard()
+
+        # Inicializar estado
+        self.setup_session_state()
 
     def setup_session_state(self) -> None:
         """Inicializa el estado de la sesión"""
