@@ -120,55 +120,60 @@ class DashboardWidgets:
         try:
             st.subheader("Historial de Calibraciones")
 
-            # Crear dos columnas
-            col1, col2 = st.columns(2)
+            # Gráfico de calibraciones por mes
+            certificates = self.certificados.get_certificates()
+            if not certificates:
+                st.info("No hay datos de calibraciones para mostrar")
+                return
 
-            with col1:
-                # Gráfico de calibraciones por mes
-                certificates = self.certificados.get_certificates()
-                if not certificates:
-                    st.info("No hay datos de calibraciones para mostrar")
-                    return
+            # Agregar espacio
+            st.markdown("<br>", unsafe_allow_html=True)
 
-                # Agrupar por mes
-                monthly_data = {}
-                for cert in certificates:
-                    month = cert['created_at'].strftime('%Y-%m')
-                    monthly_data[month] = monthly_data.get(month, 0) + 1
+            # Gráfico 1: Calibraciones Mensuales
+            monthly_data = {}
+            for cert in certificates:
+                month = cert['created_at'].strftime('%Y-%m')
+                monthly_data[month] = monthly_data.get(month, 0) + 1
 
-                fig = go.Figure()
-                fig.add_trace(go.Bar(
-                    x=list(monthly_data.keys()),
-                    y=list(monthly_data.values()),
-                    name='Calibraciones por Mes'
-                ))
-                fig.update_layout(
-                    title="Calibraciones Mensuales",
-                    xaxis_title="Mes",
-                    yaxis_title="Cantidad",
-                    height=300
+            fig1 = go.Figure()
+            fig1.add_trace(go.Bar(
+                x=list(monthly_data.keys()),
+                y=list(monthly_data.values()),
+                name='Calibraciones por Mes'
+            ))
+            fig1.update_layout(
+                title="Calibraciones Mensuales",
+                xaxis_title="Mes",
+                yaxis_title="Cantidad",
+                height=400,
+                width=None,  # Esto permite que ocupe el ancho completo
+                showlegend=True
+            )
+            st.plotly_chart(fig1, use_container_width=True)
+
+            # Agregar espacio entre gráficos
+            st.markdown("<br><br>", unsafe_allow_html=True)
+
+            # Gráfico 2: Tipos de Equipos
+            equipment_types = {}
+            for cert in certificates:
+                eq_type = cert.get('details', {}).get('type', 'Otros')
+                equipment_types[eq_type] = equipment_types.get(eq_type, 0) + 1
+
+            fig2 = go.Figure(data=[
+                go.Pie(
+                    labels=list(equipment_types.keys()),
+                    values=list(equipment_types.values()),
+                    hole=.3
                 )
-                st.plotly_chart(fig, use_container_width=True)
-
-            with col2:
-                # Gráfico de tipos de equipos calibrados
-                equipment_types = {}
-                for cert in certificates:
-                    eq_type = cert.get('details', {}).get('type', 'Otros')
-                    equipment_types[eq_type] = equipment_types.get(eq_type, 0) + 1
-
-                fig = go.Figure(data=[
-                    go.Pie(
-                        labels=list(equipment_types.keys()),
-                        values=list(equipment_types.values()),
-                        hole=.3
-                    )
-                ])
-                fig.update_layout(
-                    title="Tipos de Equipos Calibrados",
-                    height=300
-                )
-                st.plotly_chart(fig, use_container_width=True)
+            ])
+            fig2.update_layout(
+                title="Tipos de Equipos Calibrados",
+                height=400,
+                width=None,
+                showlegend=True
+            )
+            st.plotly_chart(fig2, use_container_width=True)
 
         except Exception as e:
             Logger.error(f"Error mostrando línea de tiempo: {str(e)}")
@@ -179,65 +184,70 @@ class DashboardWidgets:
         try:
             st.subheader("Análisis de Servicios")
 
-            # Crear dos columnas
-            col1, col2 = st.columns(2)
+            # Agregar espacio
+            st.markdown("<br>", unsafe_allow_html=True)
 
-            with col1:
-                # Estado de calibraciones
-                status_counts = {}
-                for cert in self.certificados.get_certificates():
-                    status = cert.get('status', 'unknown')
-                    status_counts[status] = status_counts.get(status, 0) + 1
+            # Gráfico 1: Estado de calibraciones
+            status_counts = {}
+            for cert in self.certificados.get_certificates():
+                status = cert.get('status', 'unknown')
+                status_counts[status] = status_counts.get(status, 0) + 1
 
-                fig = go.Figure(data=[
-                    go.Bar(
-                        name='Estado de Calibraciones',
-                        x=list(status_counts.keys()),
-                        y=list(status_counts.values()),
-                        text=list(status_counts.values()),
-                        textposition='auto'
-                    )
-                ])
-                fig.update_layout(
-                    title="Estado de Calibraciones",
-                    xaxis_title="Estado",
-                    yaxis_title="Cantidad",
-                    height=300
+            fig1 = go.Figure(data=[
+                go.Bar(
+                    name='Estado de Calibraciones',
+                    x=list(status_counts.keys()),
+                    y=list(status_counts.values()),
+                    text=list(status_counts.values()),
+                    textposition='auto'
                 )
-                st.plotly_chart(fig, use_container_width=True)
+            ])
+            fig1.update_layout(
+                title="Estado de Calibraciones",
+                xaxis_title="Estado",
+                yaxis_title="Cantidad",
+                height=400,
+                width=None,
+                showlegend=True
+            )
+            st.plotly_chart(fig1, use_container_width=True)
 
-            with col2:
-                # Tiempo promedio de calibración por tipo de equipo
-                equipment_times = {}
-                for cert in self.certificados.get_certificates():
-                    if cert.get('created_at') and cert.get('details', {}).get('completion_date'):
-                        eq_type = cert.get('details', {}).get('type', 'Otros')
-                        time_diff = (cert['details']['completion_date'] - cert['created_at']).days
-                        if eq_type not in equipment_times:
-                            equipment_times[eq_type] = []
-                        equipment_times[eq_type].append(time_diff)
+            # Agregar espacio entre gráficos
+            st.markdown("<br><br>", unsafe_allow_html=True)
 
-                avg_times = {
-                    k: sum(v)/len(v)
-                    for k, v in equipment_times.items()
-                }
+            # Gráfico 2: Tiempo promedio de calibración
+            equipment_times = {}
+            for cert in self.certificados.get_certificates():
+                if cert.get('created_at') and cert.get('details', {}).get('completion_date'):
+                    eq_type = cert.get('details', {}).get('type', 'Otros')
+                    time_diff = (cert['details']['completion_date'] - cert['created_at']).days
+                    if eq_type not in equipment_times:
+                        equipment_times[eq_type] = []
+                    equipment_times[eq_type].append(time_diff)
 
-                fig = go.Figure(data=[
-                    go.Bar(
-                        name='Tiempo Promedio',
-                        x=list(avg_times.keys()),
-                        y=list(avg_times.values()),
-                        text=[f"{v:.1f} días" for v in avg_times.values()],
-                        textposition='auto'
-                    )
-                ])
-                fig.update_layout(
-                    title="Tiempo Promedio de Calibración por Tipo",
-                    xaxis_title="Tipo de Equipo",
-                    yaxis_title="Días",
-                    height=300
+            avg_times = {
+                k: sum(v)/len(v)
+                for k, v in equipment_times.items()
+            }
+
+            fig2 = go.Figure(data=[
+                go.Bar(
+                    name='Tiempo Promedio',
+                    x=list(avg_times.keys()),
+                    y=list(avg_times.values()),
+                    text=[f"{v:.1f} días" for v in avg_times.values()],
+                    textposition='auto'
                 )
-                st.plotly_chart(fig, use_container_width=True)
+            ])
+            fig2.update_layout(
+                title="Tiempo Promedio de Calibración por Tipo",
+                xaxis_title="Tipo de Equipo",
+                yaxis_title="Días",
+                height=400,
+                width=None,
+                showlegend=True
+            )
+            st.plotly_chart(fig2, use_container_width=True)
 
         except Exception as e:
             Logger.error(f"Error mostrando estadísticas: {str(e)}")
@@ -283,24 +293,36 @@ class DashboardWidgets:
             st.markdown("<br>", unsafe_allow_html=True)
 
             # Métricas principales
+            st.header("📊 Panel de Control")
             self.show_metrics_card()
 
             # Agregar espacio entre secciones
-            st.markdown("<br><br>", unsafe_allow_html=True)
+            st.markdown("<br><br><br>", unsafe_allow_html=True)
 
-            # Operaciones CRUD
-            self.show_crud_operations()
+            # ABM/CRUD de Equipos y Calibraciones
+            st.header("🛠️ Gestión de Equipos y Calibraciones")
+            tab1, tab2 = st.tabs(["📝 ABM Equipos", "🔧 ABM Calibraciones"])
+
+            with tab1:
+                self._render_equipment_crud()
+            with tab2:
+                self._render_calibration_crud()
 
             # Agregar espacio entre secciones
-            st.markdown("<br><br>", unsafe_allow_html=True)
+            st.markdown("<br><br><br>", unsafe_allow_html=True)
+
+            # Historial y Estadísticas
+            st.header("📈 Análisis y Estadísticas")
 
             # Historial de Calibraciones
+            st.subheader("Historial de Calibraciones")
             self.show_requests_timeline()
 
             # Agregar espacio entre secciones
             st.markdown("<br><br>", unsafe_allow_html=True)
 
             # Análisis de Servicios
+            st.subheader("Análisis de Servicios Metrológicos")
             self.show_provider_stats()
 
         except Exception as e:
@@ -326,9 +348,12 @@ class DashboardWidgets:
             st.error("Error en operaciones de gestión")
 
     def _render_equipment_crud(self) -> None:
-        """Renderiza CRUD de equipos"""
-        # Alta (Create)
-        with st.expander("Agregar Nuevo Equipo"):
+        """Renderiza ABM de equipos"""
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            # Alta (Altas)
+            st.markdown("### Alta de Equipos")
             with st.form("new_equipment"):
                 eq_id = st.text_input("ID del Equipo")
                 eq_type = st.selectbox(
@@ -338,7 +363,7 @@ class DashboardWidgets:
                 client = st.text_input("Cliente")
                 details = st.text_area("Detalles")
 
-                if st.form_submit_button("Agregar"):
+                if st.form_submit_button("Registrar Equipo"):
                     try:
                         self.certificados.add_certificate({
                             'id': eq_id,
@@ -348,51 +373,53 @@ class DashboardWidgets:
                             'status': 'pending',
                             'created_at': datetime.now()
                         })
-                        st.success("Equipo agregado exitosamente")
+                        st.success("✅ Equipo registrado exitosamente")
                     except Exception as e:
-                        st.error(f"Error al agregar equipo: {str(e)}")
+                        st.error(f"❌ Error al registrar equipo: {str(e)}")
 
-        # Consulta y Modificación (Read & Update)
-        with st.expander("Consultar/Modificar Equipos"):
+        with col2:
+            # Bajas y Modificaciones
+            st.markdown("### Gestión de Equipos")
             equipment = self.certificados.get_certificates()
             if equipment:
                 for eq in equipment:
-                    col1, col2, col3 = st.columns([2,1,1])
-                    with col1:
-                        st.write(f"ID: {eq['id']} - {eq.get('type', 'N/A')}")
-                    with col2:
-                        if st.button("Editar", key=f"edit_{eq['id']}"):
-                            st.session_state.editing_equipment = eq['id']
-                    with col3:
-                        if st.button("Eliminar", key=f"delete_{eq['id']}"):
-                            if self.certificados.delete_certificate(eq['id']):
-                                st.success("Equipo eliminado")
-                                st.rerun()
+                    with st.expander(f"📦 Equipo: {eq['id']} - {eq.get('type', 'N/A')}"):
+                        st.write(f"Cliente: {eq.get('client', 'N/A')}")
+                        st.write(f"Estado: {eq.get('status', 'N/A')}")
 
-                    # Formulario de edición
-                    if st.session_state.get('editing_equipment') == eq['id']:
-                        with st.form(f"edit_equipment_{eq['id']}"):
-                            new_type = st.selectbox(
-                                "Tipo de Equipo",
-                                ["Balanza", "Termómetro", "Manómetro", "Calibrador", "Otro"],
-                                index=["Balanza", "Termómetro", "Manómetro", "Calibrador", "Otro"].index(eq.get('type', 'Otro'))
-                            )
-                            new_status = st.selectbox(
-                                "Estado",
-                                ["pending", "active", "calibrated"],
-                                index=["pending", "active", "calibrated"].index(eq.get('status', 'pending'))
-                            )
-
-                            if st.form_submit_button("Guardar Cambios"):
-                                if self.certificados.update_certificate(eq['id'], {
-                                    'type': new_type,
-                                    'status': new_status
-                                }):
-                                    st.success("Cambios guardados")
-                                    st.session_state.editing_equipment = None
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("✏️ Editar", key=f"edit_{eq['id']}"):
+                                st.session_state.editing_equipment = eq['id']
+                        with col2:
+                            if st.button("🗑️ Eliminar", key=f"delete_{eq['id']}"):
+                                if self.certificados.delete_certificate(eq['id']):
+                                    st.success("Equipo eliminado")
                                     st.rerun()
+
+                        if st.session_state.get('editing_equipment') == eq['id']:
+                            with st.form(f"edit_equipment_{eq['id']}"):
+                                new_type = st.selectbox(
+                                    "Tipo de Equipo",
+                                    ["Balanza", "Termómetro", "Manómetro", "Calibrador", "Otro"],
+                                    index=["Balanza", "Termómetro", "Manómetro", "Calibrador", "Otro"].index(eq.get('type', 'Otro'))
+                                )
+                                new_status = st.selectbox(
+                                    "Estado",
+                                    ["pending", "active", "calibrated"],
+                                    index=["pending", "active", "calibrated"].index(eq.get('status', 'pending'))
+                                )
+
+                                if st.form_submit_button("💾 Guardar Cambios"):
+                                    if self.certificados.update_certificate(eq['id'], {
+                                        'type': new_type,
+                                        'status': new_status
+                                    }):
+                                        st.success("✅ Cambios guardados")
+                                        st.session_state.editing_equipment = None
+                                        st.rerun()
             else:
-                st.info("No hay equipos registrados")
+                st.info("ℹ️ No hay equipos registrados")
 
     def _render_calibration_crud(self) -> None:
         """Renderiza CRUD de calibraciones"""
