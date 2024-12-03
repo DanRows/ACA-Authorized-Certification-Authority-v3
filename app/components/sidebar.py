@@ -24,6 +24,10 @@ class Sidebar:
         """Obtiene el logo en formato base64"""
         try:
             logo_path = Path(__file__).parent.parent / "static" / "images" / "procymi_logo.png"
+            if not logo_path.exists():
+                Logger.warning(f"Logo no encontrado en: {logo_path}")
+                return ""
+
             with open(logo_path, "rb") as f:
                 data = f.read()
             return base64.b64encode(data).decode()
@@ -37,43 +41,38 @@ class Sidebar:
             with st.sidebar:
                 # Ocultar elementos no deseados y estilizar
                 logo_base64 = self._get_logo_base64()
-                st.markdown(f"""
+                style_html = """
                     <style>
-                        header[data-testid="stHeader"] {{display: none;}}
-                        div.block-container {{padding-top: 0;}}
-                        div.stButton > button {{
+                        header[data-testid="stHeader"] {display: none;}
+                        div.block-container {padding-top: 0;}
+                        div.stButton > button {
                             width: 100%;
                             margin-bottom: 8px;
-                        }}
-                        div[data-testid="stSidebarNav"] {{display: none !important;}}
-                        ul[data-testid="stSidebarNavItems"] {{display: none !important;}}
-                        div[data-testid="stSidebarNavSeparator"] {{display: none !important;}}
-                        .st-emotion-cache-bjn8wh {{display: none !important;}}
-                        .st-emotion-cache-1ekxtbt {{display: none !important;}}
-                        section[data-testid="stSidebar"] > div {{
+                        }
+                        div[data-testid="stSidebarNav"] {display: none !important;}
+                        ul[data-testid="stSidebarNavItems"] {display: none !important;}
+                        div[data-testid="stSidebarNavSeparator"] {display: none !important;}
+                        .st-emotion-cache-bjn8wh {display: none !important;}
+                        .st-emotion-cache-1ekxtbt {display: none !important;}
+                        section[data-testid="stSidebar"] > div {
                             padding-top: 0;
-                        }}
-                        section[data-testid="stSidebar"] button[kind="secondary"] {{
+                        }
+                        section[data-testid="stSidebar"] button[kind="secondary"] {
                             border: none;
                             padding: 0.5rem 1rem;
                             width: 100%;
-                        }}
-                        .logo-container {{
-                            display: flex;
-                            justify-content: center;
-                            padding: 1rem 0;
-                            background-color: #ffffff;
-                            margin-bottom: 2rem;
-                        }}
-                        .logo-container img {{
-                            max-width: 150px;
-                            height: auto;
-                        }}
+                        }
                     </style>
-                    <div class="logo-container">
-                        <img src="data:image/png;base64,{logo_base64}" alt="PROCyMI Logo"/>
-                    </div>
-                """, unsafe_allow_html=True)
+                """
+                st.markdown(style_html, unsafe_allow_html=True)
+
+                # Solo mostrar el logo si existe
+                if logo_base64:
+                    st.markdown(f"""
+                        <div class="logo-container">
+                            <img src="data:image/png;base64,{logo_base64}" alt="PROCyMI Logo"/>
+                        </div>
+                    """, unsafe_allow_html=True)
 
                 if not st.session_state.authenticated:
                     # Solo mostrar el formulario de login sin navegación
