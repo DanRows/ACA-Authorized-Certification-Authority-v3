@@ -13,6 +13,17 @@ class Auth:
 
     def login_form(self) -> None:
         """Renderiza el formulario de login"""
+        # Títulos principales
+        st.markdown("""
+            <h1 style='text-align: center; margin-bottom: 0;'>
+                Agente de Certificación Autorizado
+            </h1>
+            <h3 style='text-align: center; color: #666; margin-top: 0; margin-bottom: 2rem;'>
+                Sistema de Gestión de PROCyMI
+            </h3>
+        """, unsafe_allow_html=True)
+
+        # Formulario de login
         with st.form("login_form"):
             username = st.text_input("Usuario")
             password = st.text_input("Contraseña", type="password")
