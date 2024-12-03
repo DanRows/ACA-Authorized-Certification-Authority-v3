@@ -287,6 +287,7 @@ class DashboardWidgets:
     def render(self) -> None:
         """Renderiza el dashboard"""
         try:
+<<<<<<< HEAD
             # Panel de Control
             st.header("📊 Panel de Control")
             self.show_metrics_card()
@@ -295,20 +296,49 @@ class DashboardWidgets:
             # Gestión
             st.header("🛠️ Gestión de Equipos y Calibraciones")
             tab1, tab2 = st.tabs(["📝 ABM Equipos", "🔧 ABM Calibraciones"])
+=======
+            # Agregar espacio superior
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # Métricas principales
+            st.header("📊 Panel de Control")
+            self.show_metrics_card()
+
+            # Agregar espacio entre secciones
+            st.markdown("<br><br><br>", unsafe_allow_html=True)
+
+            # ABM/CRUD de Equipos y Calibraciones
+            st.header("🛠️ Gestión de Equipos y Calibraciones")
+            tab1, tab2 = st.tabs(["📝 ABM Equipos", "🔧 ABM Calibraciones"])
+
+>>>>>>> c8529e1dac050ee5f61d09305aa48ec61b5d91ab
             with tab1:
                 self._render_equipment_crud()
             with tab2:
                 self._render_calibration_crud()
+<<<<<<< HEAD
             st.markdown("<br><br>", unsafe_allow_html=True)
 
             # Estadísticas
             st.header("📈 Estadísticas y Análisis")
 
             # Calibraciones Mensuales
+=======
+
+            # Agregar espacio entre secciones
+            st.markdown("<br><br><br>", unsafe_allow_html=True)
+
+            # Historial y Estadísticas
+            st.header("📈 Análisis y Estadísticas")
+
+            # Historial de Calibraciones
+            st.subheader("Historial de Calibraciones")
+>>>>>>> c8529e1dac050ee5f61d09305aa48ec61b5d91ab
             self.show_requests_timeline()
             st.markdown("<br><br>", unsafe_allow_html=True)
 
             # Análisis de Servicios
+            st.subheader("Análisis de Servicios Metrológicos")
             self.show_provider_stats()
 
         except Exception as e:
@@ -320,6 +350,10 @@ class DashboardWidgets:
         col1, col2 = st.columns([1, 1])
 
         with col1:
+<<<<<<< HEAD
+=======
+            # Alta (Altas)
+>>>>>>> c8529e1dac050ee5f61d09305aa48ec61b5d91ab
             st.markdown("### Alta de Equipos")
             with st.form("new_equipment"):
                 eq_id = st.text_input("ID del Equipo")
@@ -363,6 +397,53 @@ class DashboardWidgets:
                         st.success("✅ Equipo registrado exitosamente")
                     except Exception as e:
                         st.error(f"❌ Error al registrar equipo: {str(e)}")
+<<<<<<< HEAD
+=======
+
+        with col2:
+            # Bajas y Modificaciones
+            st.markdown("### Gestión de Equipos")
+            equipment = self.certificados.get_certificates()
+            if equipment:
+                for eq in equipment:
+                    with st.expander(f"📦 Equipo: {eq['id']} - {eq.get('type', 'N/A')}"):
+                        st.write(f"Cliente: {eq.get('client', 'N/A')}")
+                        st.write(f"Estado: {eq.get('status', 'N/A')}")
+
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("✏️ Editar", key=f"edit_{eq['id']}"):
+                                st.session_state.editing_equipment = eq['id']
+                        with col2:
+                            if st.button("🗑️ Eliminar", key=f"delete_{eq['id']}"):
+                                if self.certificados.delete_certificate(eq['id']):
+                                    st.success("Equipo eliminado")
+                                    st.rerun()
+
+                        if st.session_state.get('editing_equipment') == eq['id']:
+                            with st.form(f"edit_equipment_{eq['id']}"):
+                                new_type = st.selectbox(
+                                    "Tipo de Equipo",
+                                    ["Balanza", "Termómetro", "Manómetro", "Calibrador", "Otro"],
+                                    index=["Balanza", "Termómetro", "Manómetro", "Calibrador", "Otro"].index(eq.get('type', 'Otro'))
+                                )
+                                new_status = st.selectbox(
+                                    "Estado",
+                                    ["pending", "active", "calibrated"],
+                                    index=["pending", "active", "calibrated"].index(eq.get('status', 'pending'))
+                                )
+
+                                if st.form_submit_button("💾 Guardar Cambios"):
+                                    if self.certificados.update_certificate(eq['id'], {
+                                        'type': new_type,
+                                        'status': new_status
+                                    }):
+                                        st.success("✅ Cambios guardados")
+                                        st.session_state.editing_equipment = None
+                                        st.rerun()
+            else:
+                st.info("ℹ️ No hay equipos registrados")
+>>>>>>> c8529e1dac050ee5f61d09305aa48ec61b5d91ab
 
     def _render_calibration_crud(self) -> None:
         """Renderiza CRUD de calibraciones"""
