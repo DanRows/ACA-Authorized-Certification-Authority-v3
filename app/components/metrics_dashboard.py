@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Any, Dict, List, Union
 
 import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 
 from app.components.certificados import Certificados
@@ -12,81 +11,35 @@ from app.utils.logger import Logger
 
 
 class MetricsDashboard:
-    _instance = None
-    _initialized = False
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
     def __init__(self):
-        if not self._initialized:
+        if not hasattr(self, '_initialized'):
             try:
                 self.solicitudes = Solicitudes()
                 self.certificados = Certificados()
                 self.widgets = DashboardWidgets(self.solicitudes, self.certificados)
-                # Agregar datos de ejemplo solo una vez
-                self._add_sample_data()
-                self.__class__._initialized = True
+                self._initialized = True
             except Exception as e:
                 Logger.error(f"Error inicializando MetricsDashboard: {str(e)}")
                 raise
 
-    def _add_sample_data(self) -> None:
-        """Agrega datos de ejemplo para desarrollo"""
-        try:
-            # Verificar si ya hay datos
-            if len(self.solicitudes.get_requests()) == 0:
-                # Agregar algunas solicitudes de ejemplo
-                self.solicitudes.add_request({
-                    'id': '001',
-                    'status': 'pending',
-                    'provider': 'openai',
-                    'created_at': datetime.now()
-                })
-                self.solicitudes.add_request({
-                    'id': '002',
-                    'status': 'completed',
-                    'provider': 'vertex',
-                    'created_at': datetime.now()
-                })
-
-            if len(self.certificados.get_certificates()) == 0:
-                # Agregar algunos certificados de ejemplo
-                self.certificados.add_certificate({
-                    'id': '001',
-                    'status': 'active',
-                    'created_at': datetime.now(),
-                    'details': {'type': 'basic'}
-                })
-                self.certificados.add_certificate({
-                    'id': '002',
-                    'status': 'pending',
-                    'created_at': datetime.now(),
-                    'details': {'type': 'advanced'}
-                })
-        except Exception as e:
-            Logger.warning(f"No se pudieron agregar datos de ejemplo: {str(e)}")
-
     def render(self) -> None:
         """Renderiza el dashboard de métricas"""
         try:
-            # Asegurarse de que haya datos
-            if len(self.solicitudes.get_requests()) == 0:
-                self._add_sample_data()
-
             # Métricas principales
             self.widgets.show_metrics_card()
 
-            # Gráficos
+            # Gráficos principales
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # Historial y análisis
             col1, col2 = st.columns(2)
             with col1:
                 self.widgets.show_requests_timeline()
             with col2:
-                self.widgets.show_provider_stats()
+                self._render_service_stats()  # Reemplazamos show_provider_stats
 
             # Análisis detallado
+            st.markdown("<br>", unsafe_allow_html=True)
             st.header("Análisis Detallado")
             self._render_detailed_analysis()
 
@@ -94,62 +47,35 @@ class MetricsDashboard:
             Logger.error(f"Error en dashboard de métricas: {str(e)}")
             st.error("Error cargando métricas")
 
-    def _render_detailed_analysis(self) -> None:
-        """Renderiza análisis detallado"""
+    def _render_service_stats(self) -> None:
+        """Renderiza estadísticas de servicios"""
         try:
-            col1, col2 = st.columns(2)
+            st.subheader("Análisis de Servicios")
+            certificates = self.certificados.get_certificates()
 
-            with col1:
-                self._render_provider_distribution()
-            with col2:
-                self._render_status_distribution()
-
-        except Exception as e:
-            Logger.error(f"Error en análisis detallado: {str(e)}")
-            st.error("Error mostrando análisis detallado")
-
-    def _render_provider_distribution(self) -> None:
-        """Renderiza distribución por proveedor"""
-        try:
-            providers = self.solicitudes.get_provider_stats()
-            if not providers:
-                st.info("No hay datos de proveedores para mostrar")
+            if not certificates:
+                st.info("No hay datos disponibles")
                 return
 
+            # Contar servicios por tipo
+            service_counts = {}
+            for cert in certificates:
+                service_type = cert.get('type', 'Otros')
+                service_counts[service_type] = service_counts.get(service_type, 0) + 1
+
+            # Crear gráfico
             fig = px.pie(
-                values=list(providers.values()),
-                names=list(providers.keys()),
-                title="Distribución por Proveedor"
+                values=list(service_counts.values()),
+                names=list(service_counts.keys()),
+                title="Distribución de Servicios"
             )
-            st.plotly_chart(fig)
+            st.plotly_chart(fig, use_container_width=True)
+
         except Exception as e:
-            Logger.error(f"Error en distribución de proveedores: {str(e)}")
-            st.error("Error mostrando distribución de proveedores")
+            Logger.error(f"Error mostrando estadísticas de servicios: {str(e)}")
+            st.error("Error al mostrar estadísticas")
 
-    def _render_status_distribution(self) -> None:
-        """Renderiza distribución por estado"""
-        try:
-            requests = self.solicitudes.get_requests()
-            if not requests:
-                st.info("No hay datos de estados para mostrar")
-                return
-
-            status_counts = {}
-            for request in requests:
-                status = request.get('status', 'unknown')
-                status_counts[status] = status_counts.get(status, 0) + 1
-
-            fig = px.pie(
-                values=list(status_counts.values()),
-                names=list(status_counts.keys()),
-                title="Distribución por Estado"
-            )
-            st.plotly_chart(fig)
-        except Exception as e:
-            Logger.error(f"Error en distribución de estados: {str(e)}")
-            st.error("Error mostrando distribución de estados")
-
-    def get_metrics_summary(self) -> Dict[str, int]:
+    def get_metrics_summary(self) -> Dict[str, Union[int, float]]:
         """Obtiene resumen de métricas"""
         try:
             requests = self.solicitudes.get_requests()
@@ -165,7 +91,7 @@ class MetricsDashboard:
             Logger.error(f"Error obteniendo métricas: {str(e)}")
             return {}
 
-    def _calculate_success_rate(self, requests: List[Dict[str, any]]) -> float:
+    def _calculate_success_rate(self, requests: List[Dict[str, Any]]) -> float:
         """Calcula la tasa de éxito de las solicitudes"""
         try:
             if not requests:
@@ -175,3 +101,66 @@ class MetricsDashboard:
         except Exception as e:
             Logger.error(f"Error calculando tasa de éxito: {str(e)}")
             return 0.0
+
+    def _render_detailed_analysis(self) -> None:
+        """Renderiza análisis detallado"""
+        try:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                self._render_status_distribution()
+            with col2:
+                self._render_timeline_analysis()
+
+        except Exception as e:
+            Logger.error(f"Error en análisis detallado: {str(e)}")
+            st.error("Error mostrando análisis detallado")
+
+    def _render_status_distribution(self) -> None:
+        """Renderiza distribución por estado"""
+        try:
+            certificates = self.certificados.get_certificates()
+            if not certificates:
+                st.info("No hay datos disponibles")
+                return
+
+            status_counts = {}
+            for cert in certificates:
+                status = cert.get('status', 'unknown')
+                status_counts[status] = status_counts.get(status, 0) + 1
+
+            fig = px.pie(
+                values=list(status_counts.values()),
+                names=list(status_counts.keys()),
+                title="Estado de Certificaciones"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            Logger.error(f"Error en distribución de estados: {str(e)}")
+            st.error("Error mostrando distribución")
+
+    def _render_timeline_analysis(self) -> None:
+        """Renderiza análisis de línea de tiempo"""
+        try:
+            certificates = self.certificados.get_certificates()
+            if not certificates:
+                st.info("No hay datos disponibles")
+                return
+
+            # Agrupar por mes
+            monthly_data = {}
+            for cert in certificates:
+                month = cert['created_at'].strftime('%Y-%m')
+                monthly_data[month] = monthly_data.get(month, 0) + 1
+
+            fig = px.line(
+                x=list(monthly_data.keys()),
+                y=list(monthly_data.values()),
+                title="Tendencia Mensual de Certificaciones"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            Logger.error(f"Error en análisis de línea de tiempo: {str(e)}")
+            st.error("Error mostrando análisis temporal")

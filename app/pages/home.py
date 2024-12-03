@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pandas as pd
 import plotly.express as px
@@ -7,7 +7,6 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from app.components.certificados import Certificados
-from app.components.dashboard_widgets import DashboardWidgets
 from app.components.metrics_dashboard import MetricsDashboard
 from app.components.solicitudes import Solicitudes
 from app.utils.cache import CacheManager
@@ -15,87 +14,31 @@ from app.utils.logger import Logger
 
 
 class HomePage:
-    _instance = None
-    _initialized = False
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
     def __init__(self):
-        if not self._initialized:
-            try:
-                self.solicitudes = Solicitudes()
-                self.certificados = Certificados()
-                self.metrics = MetricsDashboard()
-                self.widgets = DashboardWidgets(self.solicitudes, self.certificados)
-                self.cache_manager = CacheManager()
-                self._initialize_state()
-                self.__class__._initialized = True
-            except Exception as e:
-                Logger.error(f"Error inicializando HomePage: {str(e)}")
-                raise
+        self.solicitudes = Solicitudes()
+        self.certificados = Certificados()
+        self.metrics = MetricsDashboard()
+        self.cache_manager = CacheManager()
+        self._initialize_state()
 
     def _initialize_state(self) -> None:
         """Inicializa el estado de la página"""
-        try:
-            if 'home_view' not in st.session_state:
-                st.session_state.home_view = "General"
-            if 'date_range' not in st.session_state:
-                st.session_state.date_range = [
-                    datetime.now() - timedelta(days=30),
-                    datetime.now()
-                ]
-            # Asegurarse de que haya datos de ejemplo
-            self._add_sample_data()
-        except Exception as e:
-            Logger.error(f"Error inicializando estado: {str(e)}")
-            raise
-
-    def _add_sample_data(self) -> None:
-        """Agrega datos de ejemplo si no hay datos"""
-        try:
-            if len(self.solicitudes.get_requests()) == 0:
-                self.solicitudes.add_request({
-                    'id': '001',
-                    'status': 'pending',
-                    'provider': 'openai',
-                    'created_at': datetime.now()
-                })
-                self.solicitudes.add_request({
-                    'id': '002',
-                    'status': 'completed',
-                    'provider': 'vertex',
-                    'created_at': datetime.now()
-                })
-
-            if len(self.certificados.get_certificates()) == 0:
-                self.certificados.add_certificate({
-                    'id': '001',
-                    'status': 'active',
-                    'created_at': datetime.now(),
-                    'details': {'type': 'basic'}
-                })
-                self.certificados.add_certificate({
-                    'id': '002',
-                    'status': 'pending',
-                    'created_at': datetime.now(),
-                    'details': {'type': 'advanced'}
-                })
-        except Exception as e:
-            Logger.warning(f"No se pudieron agregar datos de ejemplo: {str(e)}")
+        if 'home_view' not in st.session_state:
+            st.session_state.home_view = "General"
+        if 'date_range' not in st.session_state:
+            st.session_state.date_range = [
+                datetime.now() - timedelta(days=30),
+                datetime.now()
+            ]
 
     def render(self) -> None:
         """Renderiza la página de inicio"""
         try:
-            st.title("Panel Principal ACMA")
-
-            # Selector de vista y rango de fechas
-            col1, col2 = st.columns([1, 2])
+            # Selector de vista
+            col1, col2 = st.columns([3, 1])
             with col1:
-                view_options = ["General", "Detallada"]
-                current_view = st.session_state.get('home_view', "General")
+                view_options = ["General", "Detallado"]
+                current_view = st.session_state.home_view
                 selected_view = st.radio(
                     "Vista",
                     options=view_options,
@@ -125,18 +68,8 @@ class HomePage:
     def _render_general_view(self) -> None:
         """Renderiza vista general"""
         try:
-            # Asegurarse de que haya datos
-            if len(self.solicitudes.get_requests()) == 0:
-                self._add_sample_data()
-
-            # Métricas principales
-            self.widgets.show_metrics_card()
-
-            # Línea de tiempo
-            self.widgets.show_requests_timeline()
-
-            # Estadísticas por proveedor
-            self.widgets.show_provider_stats()
+            # Panel de métricas
+            self.metrics.render()
 
         except Exception as e:
             Logger.error(f"Error en vista general: {str(e)}")
@@ -145,11 +78,115 @@ class HomePage:
     def _render_detailed_view(self) -> None:
         """Renderiza vista detallada"""
         try:
-            # Panel de métricas completo
-            self.metrics.render()
+            # Análisis detallado
+            st.header("Análisis Detallado")
+
+            # Métricas detalladas
+            metrics = self.metrics.get_metrics_summary()
+
+            # Mostrar métricas en columnas
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                st.metric(
+                    "Total Solicitudes",
+                    metrics.get('total_requests', 0)
+                )
+            with col2:
+                st.metric(
+                    "Pendientes",
+                    metrics.get('pending_requests', 0)
+                )
+            with col3:
+                st.metric(
+                    "Total Certificados",
+                    metrics.get('total_certificates', 0)
+                )
+            with col4:
+                st.metric(
+                    "Tasa de Éxito",
+                    f"{metrics.get('success_rate', 0)}%"
+                )
+
+            # Gráficos detallados
+            st.markdown("<br>", unsafe_allow_html=True)
+            self._render_detailed_charts()
+
         except Exception as e:
             Logger.error(f"Error en vista detallada: {str(e)}")
             st.error("Error cargando vista detallada")
+
+    def _render_detailed_charts(self) -> None:
+        """Renderiza gráficos detallados"""
+        try:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                self._render_timeline_chart()
+            with col2:
+                self._render_status_chart()
+
+        except Exception as e:
+            Logger.error(f"Error en gráficos detallados: {str(e)}")
+            st.error("Error cargando gráficos")
+
+    def _render_timeline_chart(self) -> None:
+        """Renderiza gráfico de línea de tiempo"""
+        try:
+            certificates = self.certificados.get_certificates()
+            if not certificates:
+                st.info("No hay datos disponibles")
+                return
+
+            # Agrupar por mes
+            monthly_data = {}
+            for cert in certificates:
+                month = cert['created_at'].strftime('%Y-%m')
+                monthly_data[month] = monthly_data.get(month, 0) + 1
+
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=list(monthly_data.keys()),
+                y=list(monthly_data.values()),
+                mode='lines+markers',
+                name='Certificaciones'
+            ))
+            fig.update_layout(
+                title="Certificaciones por Mes",
+                xaxis_title="Mes",
+                yaxis_title="Cantidad",
+                height=300
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            Logger.error(f"Error en gráfico de línea de tiempo: {str(e)}")
+            st.error("Error mostrando gráfico")
+
+    def _render_status_chart(self) -> None:
+        """Renderiza gráfico de estados"""
+        try:
+            certificates = self.certificados.get_certificates()
+            if not certificates:
+                st.info("No hay datos disponibles")
+                return
+
+            status_counts = {}
+            for cert in certificates:
+                status = cert.get('status', 'unknown')
+                status_counts[status] = status_counts.get(status, 0) + 1
+
+            fig = px.pie(
+                values=list(status_counts.values()),
+                names=list(status_counts.keys()),
+                title="Estado de Certificaciones"
+            )
+            fig.update_layout(height=300)
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            Logger.error(f"Error en gráfico de estados: {str(e)}")
+            st.error("Error mostrando gráfico")
 
 
 def render_home_page():
